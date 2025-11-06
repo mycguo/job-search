@@ -1,7 +1,6 @@
 # UI for asking questions on the knowledge base
 import streamlit as st
 import os
-from langchain_openai import OpenAIEmbeddings
 import google.generativeai as genai
 from simple_vector_store import SimpleVectorStore as MilvusVectorStore
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -29,7 +28,7 @@ def get_chat_chain():
 
     Answers:
 """
-    model=ChatGoogleGenerativeAI(model="gemini-2.0-flash",temperature=0.3)
+    model=ChatGoogleGenerativeAI(model="gemini-2.5-flash",temperature=0.3)
     # This is too slow
     #model = ChatNVIDIA(
     #    model="deepseek-ai/deepseek-r1",
@@ -97,9 +96,9 @@ def main():
     st.markdown(""" \n \n \n \n \n \n \n\n\n\n\n\n
         # Footnote on tech stack
         web framework: https://streamlit.io/ \n
-        LLM model: "gemini-2.0-flash" \n
+        LLM model: "gemini-2.5-flash" \n
         Vector store: Milvus \n
-        Embeddings model: Milvus text-embedding-3-large \n
+        Embeddings model: Google gemini-embedding-001 \n
         LangChain: Connect LLMs for Retrieval-Augmented Generation (RAG), memory, chaining and reasoning. \n
         PyPDF2 and docx: for importing PDF and Word \n
         audio: assemblyai https://www.assemblyai.com/ \n

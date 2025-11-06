@@ -1,6 +1,6 @@
 import os
 from typing import List, Optional, Dict, Any
-from langchain_openai import OpenAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.docstore.document import Document
 from pymilvus import MilvusClient, DataType
 import numpy as np
@@ -15,12 +15,12 @@ class MilvusVectorStore:
     def __init__(
         self,
         collection_name: str = "personal_assistant",
-        embedding_model: str = "text-embedding-3-large",
+        embedding_model: str = "models/gemini-embedding-001",
         uri: Optional[str] = None,
         token: Optional[str] = None
     ):
         self.collection_name = collection_name
-        self.embedding = OpenAIEmbeddings(model=embedding_model)
+        self.embedding = GoogleGenerativeAIEmbeddings(model=embedding_model)
 
         if uri is None:
             uri = os.getenv("MILVUS_URI", "./milvus_local.db")
@@ -47,7 +47,7 @@ class MilvusVectorStore:
 
             # Add fields
             schema.add_field(field_name="id", datatype=DataType.INT64, is_primary=True)
-            schema.add_field(field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=3072)  # text-embedding-3-large dimension
+            schema.add_field(field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=3072)  # gemini-embedding-001 dimension
             schema.add_field(field_name="text", datatype=DataType.VARCHAR, max_length=65535)
 
             # Create index
@@ -193,7 +193,7 @@ class MilvusVectorStore:
     def from_texts(
         cls,
         texts: List[str],
-        embedding_model: str = "text-embedding-3-large",
+        embedding_model: str = "models/gemini-embedding-001",
         metadatas: Optional[List[dict]] = None,
         collection_name: str = "personal_assistant",
         uri: Optional[str] = None,

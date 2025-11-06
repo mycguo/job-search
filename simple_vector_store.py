@@ -2,7 +2,7 @@ import os
 import json
 import pickle
 from typing import List, Optional, Dict, Any
-from langchain_openai import OpenAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.docstore.document import Document
 import numpy as np
 from datetime import datetime
@@ -19,10 +19,10 @@ class SimpleVectorStore:
     def __init__(
         self,
         store_path: str = "./simple_vector_store",
-        embedding_model: str = "text-embedding-3-large"
+        embedding_model: str = "models/gemini-embedding-001"
     ):
         self.store_path = store_path
-        self.embedding = OpenAIEmbeddings(model=embedding_model)
+        self.embedding = GoogleGenerativeAIEmbeddings(model=embedding_model)
         self.vectors_file = os.path.join(store_path, "vectors.pkl")
         self.metadata_file = os.path.join(store_path, "metadata.json")
 
@@ -225,7 +225,7 @@ class SimpleVectorStore:
     def from_texts(
         cls,
         texts: List[str],
-        embedding_model: str = "text-embedding-3-large",
+        embedding_model: str = "models/gemini-embedding-001",
         metadatas: Optional[List[dict]] = None,
         store_path: str = "./simple_vector_store"
     ):

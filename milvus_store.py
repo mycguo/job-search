@@ -1,7 +1,7 @@
 import os
 from typing import List, Optional
 from langchain_milvus import Milvus
-from langchain_openai import OpenAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.docstore.document import Document
 from pymilvus import connections, utility, Collection, MilvusException
 
@@ -15,11 +15,11 @@ class MilvusVectorStore:
     def __init__(
         self,
         collection_name: str = "personal_assistant",
-        embedding_model: str = "text-embedding-3-large",
+        embedding_model: str = "models/gemini-embedding-001",
         connection_args: Optional[dict] = None
     ):
         self.collection_name = collection_name
-        self.embedding = OpenAIEmbeddings(model=embedding_model)
+        self.embedding = GoogleGenerativeAIEmbeddings(model=embedding_model)
 
         if connection_args is None:
             self.connection_args = {
@@ -135,7 +135,7 @@ class MilvusVectorStore:
     def from_texts(
         cls,
         texts: List[str],
-        embedding_model: str = "text-embedding-3-large",
+        embedding_model: str = "models/gemini-embedding-001",
         metadatas: Optional[List[dict]] = None,
         collection_name: str = "personal_assistant",
         connection_args: Optional[dict] = None
@@ -155,7 +155,7 @@ class MilvusVectorStore:
         from langchain_community.vectorstores import FAISS
 
         try:
-            embedding = OpenAIEmbeddings(model="text-embedding-3-large")
+            embedding = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
             faiss_store = FAISS.load_local(
                 faiss_path,
                 embedding,

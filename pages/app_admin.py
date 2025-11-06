@@ -2,7 +2,7 @@
 import streamlit as st
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import google.generativeai as genai
 from simple_vector_store import SimpleVectorStore as MilvusVectorStore
 import docx  # Import the python-docx library
@@ -23,7 +23,7 @@ import yt_dlp as youtube_dl
 
 #configuring the google api key
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-embedding = OpenAIEmbeddings(model="text-embedding-3-large")
+embedding = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 
 #tokens from https://www.assemblyai.com/ to transcribe the audio
 tokens = st.secrets["ASSEMBLYAI_API_KEY"]

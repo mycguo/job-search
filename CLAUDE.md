@@ -84,14 +84,14 @@ The application supports multiple vector store backends:
 **Processing Flow**:
 1. Content extraction with metadata
 2. Text chunking (5000 chars, 1000 overlap)
-3. Embedding generation (OpenAI text-embedding-3-large)
+3. Embedding generation (Google gemini-embedding-001)
 4. Vector storage with metadata preservation
 
 ### LLM Integration
 
 **Primary Stack**:
-- Model: Google Gemini 2.0 Flash
-- Embeddings: OpenAI text-embedding-3-large
+- Model: Google Gemini 2.5 Flash
+- Embeddings: Google gemini-embedding-001
 - Framework: LangChain for RAG pipeline
 
 **Alternative Models**: NVIDIA DeepSeek R1 available (currently disabled for performance)
@@ -101,7 +101,6 @@ The application supports multiple vector store backends:
 ### Environment Variables
 ```bash
 # Core AI Services
-OPENAI_API_KEY=your_openai_key
 GOOGLE_API_KEY=your_google_key
 GENAI_API_KEY=your_google_key
 NVIDIA_API_KEY=your_nvidia_key
@@ -122,8 +121,8 @@ BUCKET_NAME=your_bucket
 ### Streamlit Secrets
 For production deployment, use Streamlit secrets in `.streamlit/secrets.toml`:
 ```toml
-OPENAI_API_KEY = "your_key"
 GOOGLE_API_KEY = "your_key"
+GENAI_API_KEY = "your_key"
 # ... other secrets
 ```
 
@@ -166,7 +165,7 @@ All document types include comprehensive metadata:
 
 ### Local Development
 - Uses file-based vector store by default
-- Requires OpenAI API key for embeddings
+- Requires Google API key for embeddings and LLM
 - Optional services can be mocked for testing
 
 ### Production Deployment
@@ -191,8 +190,7 @@ When upgrading vector store backends:
 ## External Service Dependencies
 
 **Critical Dependencies**:
-- OpenAI API (embeddings)
-- Google AI API (primary LLM)
+- Google AI API (embeddings and primary LLM)
 
 **Optional Dependencies**:
 - AssemblyAI (audio transcription)

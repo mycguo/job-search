@@ -1,4 +1,8 @@
-# personal ai chatbot to chat with your personal knowledge base
+# Job Search Agent
+    Resume management
+    Question bank
+    Job Applied
+    Google Doc Integration
 
 
 ## run it locally 
