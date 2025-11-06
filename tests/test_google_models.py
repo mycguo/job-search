@@ -34,12 +34,12 @@ class TestGeminiLLM:
         # Initialize the model
         model = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash",
-            temperature=0.3
+            temperature=0.0
         )
 
         assert model is not None
         assert model.model == "gemini-2.5-flash"
-        assert model.temperature == 0.3
+        assert model.temperature == 0.0
 
     @skip_without_api_key
     def test_gemini_flash_basic_generation(self):
@@ -48,7 +48,7 @@ class TestGeminiLLM:
 
         model = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash",
-            temperature=0.3
+            temperature=0.0
         )
 
         # Test basic text generation
@@ -233,7 +233,7 @@ class TestRAGPipeline:
         # Create model
         model = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash",
-            temperature=0.3
+            temperature=0.0
         )
 
         # Create prompt
@@ -296,7 +296,7 @@ class TestRAGPipeline:
             # 3. Create LLM and chain
             model = ChatGoogleGenerativeAI(
                 model="gemini-2.5-flash",
-                temperature=0.3
+                temperature=0.0
             )
 
             prompt_template = """

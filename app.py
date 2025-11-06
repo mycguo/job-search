@@ -54,7 +54,7 @@ def enrich_information(text):
     Use LLM to enrich and contextualize information before storing.
     Makes it more searchable and contextual.
     """
-    model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3)
+    model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.0)
 
     enrichment_prompt = f"""You are helping to store information in a knowledge base.
 
@@ -112,6 +112,268 @@ def save_to_knowledge_base(information, enrich=True):
     except Exception as e:
         return False, str(e)
 
+def detect_application_intent(text):
+    """
+    Detect if user is reporting a job application.
+    Returns (is_application, extracted_text)
+
+    Examples:
+    - "Applied to Google for ML Engineer"
+    - "I applied to Meta for Senior SWE today"
+    - "Just submitted application to Amazon for Data Scientist"
+    """
+    application_patterns = [
+        r'applied\s+to\s+([A-Za-z0-9\s&.]+?)\s+for\s+([A-Za-z0-9\s/\-.]+?)(?:\s+(?:today|yesterday|on\s+[\w\s,]+))?$',
+        r'applied\s+at\s+([A-Za-z0-9\s&.]+?)\s+(?:for|as)\s+(?:a\s+)?([A-Za-z0-9\s/\-.]+?)(?:\s+(?:today|yesterday|on\s+[\w\s,]+))?$',
+        r'submitted\s+application\s+to\s+([A-Za-z0-9\s&.]+?)\s+for\s+([A-Za-z0-9\s/\-.]+?)(?:\s+(?:today|yesterday|on\s+[\w\s,]+))?$',
+        r'applying\s+to\s+([A-Za-z0-9\s&.]+?)\s+for\s+([A-Za-z0-9\s/\-.]+?)(?:\s+(?:today|yesterday|on\s+[\w\s,]+))?$',
+        r'just\s+applied\s+(?:to|at)\s+([A-Za-z0-9\s&.]+?)\s+(?:for|as)\s+(?:a\s+)?([A-Za-z0-9\s/\-.]+?)(?:\s+(?:today|yesterday|on\s+[\w\s,]+))?$',
+    ]
+
+    text_clean = text.strip()
+
+    for pattern in application_patterns:
+        match = re.search(pattern, text_clean, re.IGNORECASE)
+        if match:
+            return True, text_clean
+
+    return False, text
+
+def parse_application_details(text):
+    """
+    Use LLM to extract structured application details from natural language.
+
+    Args:
+        text: Natural language text about a job application
+
+    Returns:
+        dict with company, role, date, and any additional context
+    """
+    model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.1)
+
+    prompt = f"""Extract job application details from this text in JSON format.
+
+Text: "{text}"
+
+Extract these fields:
+- company: Company name (required)
+- role: Job title/role (required)
+- date: Application date (use today's date if not specified: {datetime.now().strftime('%Y-%m-%d')})
+- location: Location if mentioned (optional)
+- salary_range: Salary if mentioned (optional)
+- notes: Any additional context or notes (optional)
+
+Return ONLY valid JSON with these exact keys. Be precise and concise.
+Example: {{"company": "Google", "role": "ML Engineer", "date": "2025-11-06", "notes": "Applied through referral"}}"""
+
+    try:
+        response = model.invoke(prompt)
+        content = response.content.strip()
+
+        # Extract JSON
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+
+        import json
+        details = json.loads(content)
+
+        # Ensure required fields
+        if 'company' not in details or 'role' not in details:
+            return None
+
+        # Set default date if missing
+        if 'date' not in details or not details['date']:
+            details['date'] = datetime.now().strftime('%Y-%m-%d')
+
+        return details
+
+    except Exception as e:
+        print(f"Error parsing application: {e}")
+        return None
+
+def detect_interview_intent(text):
+    """
+    Detect if user is mentioning an interview.
+    Returns (is_interview, extracted_text)
+
+    Examples:
+    - "Interview with Jane at Google tomorrow at 2pm"
+    - "Phone screen with Meta on Nov 10"
+    - "Technical interview scheduled for Friday"
+    """
+    interview_patterns = [
+        r'interview\s+(?:with|at)\s+',
+        r'phone\s+screen\s+(?:with|at)\s+',
+        r'(?:technical|behavioral|onsite|virtual)\s+interview',
+        r'interviewing\s+(?:with|at)\s+',
+        r'scheduled\s+interview',
+    ]
+
+    text_lower = text.lower().strip()
+
+    for pattern in interview_patterns:
+        if re.search(pattern, text_lower):
+            return True, text
+
+    return False, text
+
+def parse_interview_details(text):
+    """
+    Use LLM to extract interview details from natural language.
+
+    Args:
+        text: Natural language text about an interview
+
+    Returns:
+        dict with company, date, time, type, interviewer, and notes
+    """
+    model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.1)
+
+    prompt = f"""Extract interview details from this text in JSON format.
+
+Text: "{text}"
+
+Extract these fields:
+- company: Company name (required)
+- date: Interview date (required, format: YYYY-MM-DD)
+- time: Time if mentioned (e.g., "2:00 PM")
+- interview_type: phone/video/technical/behavioral/onsite (if mentioned)
+- interviewer: Interviewer name if mentioned
+- notes: Any additional context
+
+Return ONLY valid JSON. If date uses relative terms (tomorrow, Friday), calculate the actual date based on today being {datetime.now().strftime('%A, %Y-%m-%d')}.
+Example: {{"company": "Google", "date": "2025-11-10", "time": "2:00 PM", "interview_type": "technical", "notes": "Bring ID"}}"""
+
+    try:
+        response = model.invoke(prompt)
+        content = response.content.strip()
+
+        # Extract JSON
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+
+        import json
+        details = json.loads(content)
+
+        # Ensure required fields
+        if 'company' not in details or 'date' not in details:
+            return None
+
+        return details
+
+    except Exception as e:
+        print(f"Error parsing interview: {e}")
+        return None
+
+def create_application_from_text(details):
+    """
+    Create a job application from parsed details.
+
+    Args:
+        details: Dictionary with application details
+
+    Returns:
+        tuple: (success, message)
+    """
+    try:
+        from storage.json_db import JobSearchDB
+        from models.application import create_application
+
+        db = JobSearchDB()
+
+        # Create application
+        app = create_application(
+            company=details['company'],
+            role=details['role'],
+            status='applied',
+            applied_date=details.get('date', datetime.now().strftime('%Y-%m-%d')),
+            location=details.get('location'),
+            salary_range=details.get('salary_range'),
+            notes=details.get('notes')
+        )
+
+        db.add_application(app)
+
+        return True, f"✅ Created application: {details['company']} - {details['role']}"
+
+    except ValueError as e:
+        # Duplicate or validation error
+        return False, f"⚠️ {str(e)}"
+    except Exception as e:
+        return False, f"❌ Error creating application: {str(e)}"
+
+def add_interview_to_application(details):
+    """
+    Add interview details to an existing application or create note.
+
+    Args:
+        details: Dictionary with interview details
+
+    Returns:
+        tuple: (success, message)
+    """
+    try:
+        from storage.json_db import JobSearchDB
+
+        db = JobSearchDB()
+
+        # Find matching application
+        applications = db.list_applications()
+        matching_app = None
+
+        for app in applications:
+            if app.company.lower() == details['company'].lower():
+                # Prefer active applications
+                if app.status not in ['rejected', 'withdrawn', 'accepted']:
+                    matching_app = app
+                    break
+
+        if not matching_app and applications:
+            # Fall back to any matching company
+            for app in applications:
+                if app.company.lower() == details['company'].lower():
+                    matching_app = app
+                    break
+
+        if matching_app:
+            # Add interview as note
+            interview_note = f"Interview scheduled: {details.get('date', 'TBD')}"
+            if details.get('time'):
+                interview_note += f" at {details['time']}"
+            if details.get('interview_type'):
+                interview_note += f" ({details['interview_type']})"
+            if details.get('interviewer'):
+                interview_note += f" with {details['interviewer']}"
+            if details.get('notes'):
+                interview_note += f". {details['notes']}"
+
+            db.add_application_note(matching_app.id, interview_note)
+
+            # Update status to interview if currently just applied or screening
+            if matching_app.status in ['applied', 'screening']:
+                db.update_status(matching_app.id, 'interview', interview_note)
+                return True, f"✅ Interview added to {details['company']} application and status updated to 'interview'"
+            else:
+                return True, f"✅ Interview details added to {details['company']} application"
+        else:
+            # No matching application - save to knowledge base
+            interview_info = f"Interview at {details['company']} on {details.get('date', 'TBD')}"
+            if details.get('time'):
+                interview_info += f" at {details['time']}"
+            success, _ = save_to_knowledge_base(interview_info, enrich=False)
+
+            if success:
+                return True, f"💾 Interview details saved (no matching application found for {details['company']})"
+            else:
+                return False, "❌ Failed to save interview details"
+
+    except Exception as e:
+        return False, f"❌ Error adding interview: {str(e)}"
+
 def get_chat_chain():
     prompt_template="""
     Answer the questions based on local konwledge base honestly
@@ -121,7 +383,7 @@ def get_chat_chain():
 
     Answers:
 """
-    model=ChatGoogleGenerativeAI(model="gemini-2.5-flash",temperature=0.3)
+    model=ChatGoogleGenerativeAI(model="gemini-2.5-flash",temperature=0.0)
     # This is too slow
     #model = ChatNVIDIA(
     #    model="deepseek-ai/deepseek-r1",
@@ -137,8 +399,71 @@ def get_chat_chain():
 
 def user_input(user_question):
     """
-    Process user input - either save information or answer questions.
+    Process user input - handle job applications, interviews, remember commands, or answer questions.
     """
+    # Check for job application intent
+    is_application, app_text = detect_application_intent(user_question)
+
+    if is_application:
+        st.info(f"📝 Detected job application: '{app_text}'")
+        with st.spinner("Parsing application details..."):
+            details = parse_application_details(app_text)
+
+            if details:
+                # Show what we extracted
+                st.write("**Extracted details:**")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write(f"🏢 Company: {details['company']}")
+                    st.write(f"💼 Role: {details['role']}")
+                with col2:
+                    st.write(f"📅 Date: {details['date']}")
+                    if details.get('location'):
+                        st.write(f"📍 Location: {details['location']}")
+
+                # Create application
+                success, message = create_application_from_text(details)
+                if success:
+                    st.success(message)
+                    st.balloons()
+                    st.info("💡 View all applications in the **Manage Applications** page")
+                else:
+                    st.warning(message)
+            else:
+                st.error("❌ Could not parse application details. Please try again or use the manual form.")
+        return
+
+    # Check for interview intent
+    is_interview, interview_text = detect_interview_intent(user_question)
+
+    if is_interview:
+        st.info(f"📅 Detected interview mention: '{interview_text}'")
+        with st.spinner("Parsing interview details..."):
+            details = parse_interview_details(interview_text)
+
+            if details:
+                # Show what we extracted
+                st.write("**Extracted details:**")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write(f"🏢 Company: {details['company']}")
+                    st.write(f"📅 Date: {details['date']}")
+                with col2:
+                    if details.get('time'):
+                        st.write(f"⏰ Time: {details['time']}")
+                    if details.get('interview_type'):
+                        st.write(f"📝 Type: {details['interview_type']}")
+
+                # Add to application
+                success, message = add_interview_to_application(details)
+                if success:
+                    st.success(message)
+                else:
+                    st.warning(message)
+            else:
+                st.error("❌ Could not parse interview details. Please add manually.")
+        return
+
     # Check if this is a "remember" command
     is_remember, extracted_info = detect_remember_intent(user_question)
 
@@ -193,11 +518,58 @@ def download_faiss_from_s3():
     print("Milvus uses its own persistence. Migration from FAISS can be done if needed.")
 
 def main():
-    st.title("AI Knowledge Assistant")
-    st.header("Ask questions on your knowledge base")
+    st.set_page_config(page_title="Job Search Agent", page_icon="🎯", layout="wide")
 
-    # Sidebar for manual information saving
+    st.title("🎯 Job Search Agent")
+    st.markdown("Your AI-powered career companion")
+
+    # Import here to avoid circular imports
+    try:
+        from storage.json_db import JobSearchDB
+        db = JobSearchDB()
+        has_job_db = True
+    except Exception as e:
+        print(f"Job search DB not available: {e}")
+        db = None
+        has_job_db = False
+
+    # Sidebar for navigation and quick actions
     with st.sidebar:
+        st.header("🧭 Navigation")
+
+        if st.button("📊 Dashboard", use_container_width=True):
+            st.switch_page("pages/dashboard.py")
+
+        if st.button("📝 Manage Applications", use_container_width=True):
+            st.switch_page("pages/applications.py")
+
+        if st.button("📚 Knowledge Base", use_container_width=True):
+            st.switch_page("pages/app_admin.py")
+
+        if st.button("🎯 Interview Prep", use_container_width=True):
+            st.switch_page("pages/interview_prep.py")
+
+        st.divider()
+
+        # Quick stats
+        if has_job_db and db:
+            st.header("📊 Quick Stats")
+            try:
+                stats = db.get_stats()
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Applications", stats['total'])
+                with col2:
+                    st.metric("Active", stats['active'])
+
+                if stats['total'] > 0:
+                    st.metric("Response Rate", f"{stats['response_rate']}%")
+            except Exception as e:
+                st.caption("No applications yet")
+
+        st.divider()
+
+        # Quick save section
         st.header("💾 Quick Save")
         st.markdown("Save information without uploading documents")
 
@@ -230,33 +602,77 @@ def main():
                     st.error(f"❌ Error: {result}")
 
         st.divider()
-        st.caption("💡 **Tip**: You can also type 'Remember that...' in the chat")
+        st.caption("💡 **Tip**: Type 'Remember that...' or 'Applied to...' in chat")
 
     # fix the empty vector store issue
-    get_vector_store(get_text_chunks("Loading some documents to build your knowledge base"))
+    get_vector_store(get_text_chunks("Loading your knowledge base for job search insights"))
 
     # Main chat interface
-    st.markdown("### 💬 Chat")
+    st.header("💬 AI Assistant")
+    st.markdown("Ask questions, track applications, or save information naturally")
+
+    # Quick action buttons
+    col1, col2, col3, col4, col5 = st.columns(5)
+    with col1:
+        if st.button("📊 Dashboard", use_container_width=True):
+            st.switch_page("pages/dashboard.py")
+    with col2:
+        if st.button("🎯 Interview Prep", use_container_width=True):
+            st.switch_page("pages/interview_prep.py")
+    with col3:
+        if st.button("➕ Add Application", use_container_width=True):
+            st.switch_page("pages/applications.py")
+    with col4:
+        if st.button("📋 View All Apps", use_container_width=True):
+            st.switch_page("pages/applications.py")
+    with col5:
+        if st.button("📚 Upload Docs", use_container_width=True):
+            st.switch_page("pages/app_admin.py")
+
+    st.divider()
+
     user_question = st.text_input(
-        "Ask a question or say 'Remember that...' to save information:",
-        placeholder="Examples: 'Tell me about Charles?' or 'Remember that I prefer Python'",
-        help="Type naturally - the system will detect if you want to save or retrieve information"
+        "Ask anything or track your job search:",
+        placeholder="Examples: 'Applied to Google today' or 'What companies should I target?'",
+        help="Natural language - the system understands job search commands"
     )
     if user_question:
         user_input(user_question)
     
     
-    st.markdown("<div style='height:300px;'></div>", unsafe_allow_html=True)
-    st.markdown(""" \n \n \n \n \n \n \n\n\n\n\n\n
-        # Footnote on tech stack
-        web framework: https://streamlit.io/ \n
-        LLM model: "gemini-2.5-flash" \n
-        Vector store: Milvus \n
-        Embeddings model: Google gemini-embedding-001 \n
-        LangChain: Connect LLMs for Retrieval-Augmented Generation (RAG), memory, chaining and reasoning. \n
-        PyPDF2 and docx: for importing PDF and Word \n
-        audio: assemblyai https://www.assemblyai.com/ \n
-        Video: moviepy https://zulko.github.io/moviepy/ \n
+    # Help section
+    with st.expander("💡 How to use Job Search Agent"):
+        st.markdown("""
+        ### Quick Start
+
+        **Track Applications Naturally:**
+        - "Applied to Google for ML Engineer today"
+        - "Interview with Meta tomorrow at 2pm"
+        - "Google offers $200k for this role"
+
+        **Ask Questions:**
+        - "What companies have I applied to?"
+        - "When is my next interview?"
+        - "Show me all active applications"
+
+        **Save Information:**
+        - "Remember that I prefer remote work"
+        - "Note: Google uses Go and Python"
+
+        ### Features
+        - 📊 **Dashboard** - Visualize your progress with charts and metrics
+        - 🎯 **Interview Prep** - Build your personal interview toolkit
+        - 📝 **Track applications** - Natural language or manual entry
+        - 🤖 **AI-powered matching** - Job analysis and scoring
+        - 💾 **Natural language** - Just talk to track your search
+        - 📅 **Interview scheduling** - Auto-detect and schedule
+        - 📈 **Analytics** - Response rates, pipeline stats, timeline
+        """)
+
+    st.markdown("<div style='height:200px;'></div>", unsafe_allow_html=True)
+    st.markdown("""
+        ---
+        **Tech Stack:** Streamlit • Gemini 2.5 Flash • Google Embeddings • RAG • LangChain
     """)    
 
 if __name__ == "__main__":

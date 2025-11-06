@@ -1,0 +1,31 @@
+[
+  {
+    "question": "Tell me about a time you led a difficult project",
+    "type": "behavioral",
+    "category": "leadership",
+    "difficulty": "medium",
+    "answer_full": "In my previous role as a senior developer...",
+    "id": "iq_3a910a7a",
+    "answer_star": {
+      "situation": "Led a team of 5 developers on a critical migration project",
+      "task": "Migrate legacy system to microservices within 3 months",
+      "action": "Created detailed migration plan, set up daily standups, implemented CI/CD",
+      "result": "Completed migration 2 weeks early, reduced deployment time by 70%"
+    },
+    "notes": "",
+    "tags": [
+      "leadership",
+      "project-management",
+      "migration"
+    ],
+    "companies": [
+      "Google",
+      "Amazon"
+    ],
+    "last_practiced": "2025-11-06T13:33:42.798451",
+    "practice_count": 1,
+    "confidence_level": 4,
+    "created_at": "2025-11-06T13:33:42.797957",
+    "updated_at": "2025-11-06T13:33:42.798477"
+  }
+]
