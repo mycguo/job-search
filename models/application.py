@@ -13,6 +13,7 @@ class ContactLink:
     """Reference to a single contact person"""
     name: Optional[str] = None
     url: Optional[str] = None
+    email: Optional[str] = None
     notes: Optional[str] = None
 
 

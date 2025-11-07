@@ -36,7 +36,7 @@ pytest --cov=. tests/
 ### Vector Store Testing
 ```bash
 # Test vector store implementation
-python test_milvus.py
+pytest tests/test_google_models.py::TestSimpleVectorStore -v
 ```
 
 ### Container Development
@@ -66,13 +66,8 @@ The application supports multiple vector store backends:
    - Files: `metadata.json`, `vectors.pkl`
    - Benefits: No external dependencies, Streamlit-compatible, simple deployment
 
-2. **MilvusVectorStore**: Scalable vector database
-   - Local: Milvus Lite (`.db` file)
-   - Remote: Milvus server or Zilliz Cloud
-   - Configuration via `MILVUS_URI` environment variable
-
-3. **Legacy FAISS**: Original implementation (deprecated)
-   - Migration tools available in `MilvusVectorStore.migrate_from_faiss()`
+2. **Legacy FAISS**: Original implementation (deprecated)
+   - Note: Milvus implementations were removed; using SimpleVectorStore as the primary vector store
 
 ### Document Processing Pipeline
 
@@ -184,7 +179,7 @@ When upgrading vector store backends:
 
 - Unit tests with mocked external services
 - Integration tests for web crawler functionality
-- Vector store functionality tested via `test_milvus.py`
+- Vector store functionality tested via `tests/test_google_models.py::TestSimpleVectorStore`
 - Mock patterns available for AI service testing
 
 ## External Service Dependencies

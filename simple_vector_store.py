@@ -164,8 +164,9 @@ class SimpleVectorStore:
         # Save to files
         self._save_vectors()
         self._save_metadata()
-
+        
         print(f"Added {len(texts)} documents to vector store")
+        
         return ids
 
     def add_documents(self, documents: List[Document]) -> List[str]:

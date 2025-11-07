@@ -707,7 +707,20 @@ from storage.auth_utils import is_user_logged_in, login, logout
 def login_screen():
     st.header("Please log in to access Job Search Agent")
     st.subheader("Please log in.")
-    st.button("Log in with Google", on_click=login)
+    
+    # Only show login button if login hasn't been attempted yet
+    # This prevents showing the button during OAuth flow
+    if 'login_attempted' not in st.session_state:
+        st.button("Log in with Google", on_click=login)
+        # Note: After logout → login, OAuth redirect clears session state
+        # User will need to click login button again after OAuth completes
+    else:
+        st.info("🔄 Login in progress... Please complete the authentication.")
+        # Add a button to reset if stuck
+        if st.button("Reset login state"):
+            if 'login_attempted' in st.session_state:
+                del st.session_state['login_attempted']
+            st.rerun()
 
 
 def main():
@@ -785,8 +798,14 @@ def main():
             except Exception as e:
                 st.caption("No applications yet")
 
-    # fix the empty vector store issue
-    get_vector_store(get_text_chunks("Loading your knowledge base for job search insights"))
+    # Initialize vector store if empty (to avoid errors on first query)
+    try:
+        vector_store = MilvusVectorStore()
+        # Only add initialization document if vector store is completely empty
+        if len(vector_store.metadata) == 0:
+            get_vector_store(get_text_chunks("Job Search Agent knowledge base initialized"))
+    except Exception:
+        pass  # Vector store initialization will happen on first document upload
 
     # Main chat interface
     st.header("💬 AI Assistant")
