@@ -23,21 +23,43 @@ def get_user_id() -> str:
         # For non-Streamlit contexts (e.g., tests), return a default
         return "default_user"
     
-    if not st.user.is_logged_in:
-        raise ValueError("User is not logged in")
+    # Safely check if user is logged in
+    try:
+        if hasattr(st, 'user') and hasattr(st.user, 'is_logged_in'):
+            if not st.user.is_logged_in:
+                raise ValueError("User is not logged in")
+    except (AttributeError, KeyError):
+        # If is_logged_in doesn't exist, continue (for Community Cloud compatibility)
+        pass
     
-    # Try to get email first (most unique identifier)
+    # Try to get user identifier safely
     user_identifier = None
-    if hasattr(st.user, 'email') and st.user.email:
-        user_identifier = st.user.email
-    elif hasattr(st.user, 'name') and st.user.name:
-        user_identifier = st.user.name
-    elif hasattr(st.user, 'id') and st.user.id:
-        user_identifier = str(st.user.id)
-    else:
-        # Fallback: generate hash from user object
-        user_str = str(st.user.__dict__)
-        user_identifier = hashlib.md5(user_str.encode()).hexdigest()
+    try:
+        if hasattr(st, 'user'):
+            if hasattr(st.user, 'email') and st.user.email:
+                user_identifier = st.user.email
+            elif hasattr(st.user, 'name') and st.user.name:
+                user_identifier = st.user.name
+            elif hasattr(st.user, 'id') and st.user.id:
+                user_identifier = str(st.user.id)
+            else:
+                # Fallback: generate hash from user object
+                try:
+                    user_str = str(st.user.__dict__)
+                    user_identifier = hashlib.md5(user_str.encode()).hexdigest()
+                except:
+                    pass
+    except (AttributeError, KeyError):
+        pass
+    
+    # If we couldn't get a user identifier, use session-based or default
+    if not user_identifier:
+        # Try to use session state as fallback
+        if hasattr(st, 'session_state') and 'user_id' in st.session_state:
+            user_identifier = st.session_state['user_id']
+        else:
+            # Final fallback: use a default user ID
+            user_identifier = "default_user"
     
     # Sanitize the identifier for use in file paths and collection names
     # Replace invalid characters with underscores

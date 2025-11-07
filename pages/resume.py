@@ -14,6 +14,7 @@ import io
 sys.path.insert(0, '.')
 
 from storage.resume_db import ResumeDB
+from storage.auth_utils import is_user_logged_in, login, logout
 from models.resume import create_resume, extract_skills_from_text, create_tailored_resume
 from PyPDF2 import PdfReader
 import docx
@@ -748,13 +749,13 @@ def show_resume_detail(db: ResumeDB, resume_id: str):
 def login_screen():
     st.header("Please log in to access Resume Management")
     st.subheader("Please log in.")
-    st.button("Log in with Google", on_click=st.login)
+    st.button("Log in with Google", on_click=login)
 
 
 def main():
     st.set_page_config(page_title="Resume Management", page_icon="📄", layout="wide")
 
-    if not st.user.is_logged_in:
+    if not is_user_logged_in():
         login_screen()
         return
 
@@ -870,7 +871,7 @@ def main():
     
     # Logout button
     st.divider()
-    st.button("Log out", on_click=st.logout)
+    st.button("Log out", on_click=logout)
 
 
 if __name__ == "__main__":

@@ -44,6 +44,7 @@ def render_contact(label: str, contact: Optional[ContactLink]):
 
 from storage.json_db import JobSearchDB
 from ai.job_matcher import JobMatcher, get_default_user_profile
+from storage.auth_utils import is_user_logged_in, login, logout
 
 
 def show_application_card(app: Application, db: JobSearchDB):
@@ -503,13 +504,13 @@ def show_application_detail(db: JobSearchDB, app_id: str):
 def login_screen():
     st.header("Please log in to access Applications")
     st.subheader("Please log in.")
-    st.button("Log in with Google", on_click=st.login)
+    st.button("Log in with Google", on_click=login)
 
 
 def main():
     st.set_page_config(page_title="Applications", page_icon="📝", layout="wide")
 
-    if not st.user.is_logged_in:
+    if not is_user_logged_in():
         login_screen()
         return
 
@@ -741,7 +742,7 @@ def main():
     
     # Logout button
     st.divider()
-    st.button("Log out", on_click=st.logout)
+    st.button("Log out", on_click=logout)
 
 
 if __name__ == "__main__":

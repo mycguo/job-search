@@ -5,6 +5,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import google.generativeai as genai
 from simple_vector_store import SimpleVectorStore as MilvusVectorStore
+from storage.auth_utils import is_user_logged_in, login, logout
 import docx  # Import the python-docx library
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -248,13 +249,13 @@ def get_urls(url):
 def login_screen():
     st.header("Please log in to access Upload Documents")
     st.subheader("Please log in.")
-    st.button("Log in with Google", on_click=st.login)
+    st.button("Log in with Google", on_click=login)
 
 
 def main():
     st.set_page_config(page_title="Upload Documents", page_icon="📚", layout="wide")
     
-    if not st.user.is_logged_in:
+    if not is_user_logged_in():
         login_screen()
         return
     
@@ -516,7 +517,7 @@ def main():
     
     # Logout button
     st.divider()
-    st.button("Log out", on_click=st.logout)
+    st.button("Log out", on_click=logout)
 
 if __name__ == "__main__":
     main()

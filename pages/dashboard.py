@@ -15,6 +15,7 @@ from collections import Counter
 sys.path.insert(0, '.')
 
 from storage.json_db import JobSearchDB
+from storage.auth_utils import is_user_logged_in, login, logout
 from models.application import Application
 
 
@@ -238,13 +239,13 @@ def get_action_items(apps):
 def login_screen():
     st.header("Please log in to access Dashboard")
     st.subheader("Please log in.")
-    st.button("Log in with Google", on_click=st.login)
+    st.button("Log in with Google", on_click=login)
 
 
 def main():
     st.set_page_config(page_title="Dashboard", page_icon="📊", layout="wide")
 
-    if not st.user.is_logged_in:
+    if not is_user_logged_in():
         login_screen()
         return
 
@@ -428,7 +429,7 @@ def main():
     
     # Logout button
     st.divider()
-    st.button("Log out", on_click=st.logout)
+    st.button("Log out", on_click=logout)
 
 
 if __name__ == "__main__":
