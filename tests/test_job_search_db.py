@@ -7,7 +7,7 @@ import tempfile
 import shutil
 import os
 from datetime import datetime
-from models.application import Application, ApplicationEvent, create_application
+from models.application import Application, ApplicationEvent, ContactLink, create_application
 from storage.json_db import JobSearchDB
 
 
@@ -92,6 +92,28 @@ class TestApplicationModel:
         assert app.role == "Senior Engineer"
         assert app.id == "app_test123"
         assert len(app.timeline) == 1
+
+    def test_application_contact_links_serialization(self):
+        """Ensure recruiter/hiring manager links persist through serialization"""
+        recruiter = ContactLink(name="Jane Recruiter", url="https://linkedin.com/in/jane")
+        hiring_manager = ContactLink(name="Alex Lead", url="https://linkedin.com/in/alex")
+
+        app = Application(
+            company="Reflection AI",
+            role="Forward Deployed Engineer",
+            status="applied",
+            applied_date="2025-11-06",
+            recruiter_contact=recruiter,
+            hiring_manager_contact=hiring_manager
+        )
+
+        data = app.to_dict()
+        assert data['recruiter_contact']['name'] == "Jane Recruiter"
+        assert data['hiring_manager_contact']['url'] == "https://linkedin.com/in/alex"
+
+        restored = Application.from_dict(data)
+        assert restored.recruiter_contact.name == "Jane Recruiter"
+        assert restored.hiring_manager_contact.url.endswith("/alex")
 
     def test_create_application_helper(self):
         """Test create_application helper function"""
