@@ -16,17 +16,19 @@ sys.path.insert(0, '.')
 from models.application import Application, ContactLink, create_application
 
 
-def build_contact_link(name: str, url: str) -> Optional[ContactLink]:
+def build_contact_link(name: str, url: str, email: str = None) -> Optional[ContactLink]:
     """Create a ContactLink object when data is provided"""
     sanitized_name = (name or "").strip()
     sanitized_url = (url or "").strip()
+    sanitized_email = (email or "").strip()
 
-    if not sanitized_name and not sanitized_url:
+    if not sanitized_name and not sanitized_url and not sanitized_email:
         return None
 
     return ContactLink(
         name=sanitized_name or None,
-        url=sanitized_url or None
+        url=sanitized_url or None,
+        email=sanitized_email or None
     )
 
 
@@ -36,9 +38,19 @@ def render_contact(label: str, contact: Optional[ContactLink]):
         return
 
     display_name = contact.name or label
+    contact_info = []
 
+    if contact.name:
+        contact_info.append(display_name)
+    
+    if contact.email:
+        contact_info.append(f"📧 {contact.email}")
+    
     if contact.url:
-        st.markdown(f"**{label}:** [{display_name}]({contact.url})")
+        contact_info.append(f"[Link]({contact.url})")
+
+    if contact_info:
+        st.write(f"**{label}:** {' • '.join(contact_info)}")
     else:
         st.write(f"**{label}:** {display_name}")
 
@@ -448,6 +460,11 @@ def show_application_detail(db: JobSearchDB, app_id: str):
                     value=app.recruiter_contact.name if app.recruiter_contact and app.recruiter_contact.name else "",
                     key=f"edit_recruiter_name_{app.id}"
                 )
+                recruiter_email_value = st.text_input(
+                    "Recruiter Email",
+                    value=app.recruiter_contact.email if app.recruiter_contact and app.recruiter_contact.email else "",
+                    key=f"edit_recruiter_email_{app.id}"
+                )
                 recruiter_link_value = st.text_input(
                     "Recruiter Contact Link",
                     value=app.recruiter_contact.url if app.recruiter_contact and app.recruiter_contact.url else "",
@@ -459,6 +476,11 @@ def show_application_detail(db: JobSearchDB, app_id: str):
                     "Hiring Manager Name",
                     value=app.hiring_manager_contact.name if app.hiring_manager_contact and app.hiring_manager_contact.name else "",
                     key=f"edit_hiring_manager_name_{app.id}"
+                )
+                hiring_manager_email_value = st.text_input(
+                    "Hiring Manager Email",
+                    value=app.hiring_manager_contact.email if app.hiring_manager_contact and app.hiring_manager_contact.email else "",
+                    key=f"edit_hiring_manager_email_{app.id}"
                 )
                 hiring_manager_link_value = st.text_input(
                     "Hiring Manager Contact Link",
@@ -482,8 +504,8 @@ def show_application_detail(db: JobSearchDB, app_id: str):
                         'job_url': new_job_url if new_job_url else None,
                         'job_description': new_job_description if new_job_description else None,
                         'notes': new_notes if new_notes else None,
-                        'recruiter_contact': build_contact_link(recruiter_name_value, recruiter_link_value),
-                        'hiring_manager_contact': build_contact_link(hiring_manager_name_value, hiring_manager_link_value)
+                        'recruiter_contact': build_contact_link(recruiter_name_value, recruiter_link_value, recruiter_email_value),
+                        'hiring_manager_contact': build_contact_link(hiring_manager_name_value, hiring_manager_link_value, hiring_manager_email_value)
                     }
 
                     # Update in database
@@ -598,6 +620,11 @@ def main():
                     placeholder="e.g., Jane Recruiter",
                     key="new_recruiter_name"
                 )
+                recruiter_email = st.text_input(
+                    "Recruiter Email",
+                    placeholder="e.g., jane@company.com",
+                    key="new_recruiter_email"
+                )
                 recruiter_link = st.text_input(
                     "Recruiter Contact Link",
                     placeholder="https://linkedin.com/in/...",
@@ -608,6 +635,11 @@ def main():
                     "Hiring Manager Name",
                     placeholder="e.g., Alex Hiring",
                     key="new_hiring_manager_name"
+                )
+                hiring_manager_email = st.text_input(
+                    "Hiring Manager Email",
+                    placeholder="e.g., alex@company.com",
+                    key="new_hiring_manager_email"
                 )
                 hiring_manager_link = st.text_input(
                     "Hiring Manager Contact Link",
@@ -674,8 +706,8 @@ def main():
                                     st.caption("Continuing without AI analysis...")
 
                         # Create application
-                        recruiter_contact = build_contact_link(recruiter_name, recruiter_link)
-                        hiring_manager_contact = build_contact_link(hiring_manager_name, hiring_manager_link)
+                        recruiter_contact = build_contact_link(recruiter_name, recruiter_link, recruiter_email)
+                        hiring_manager_contact = build_contact_link(hiring_manager_name, hiring_manager_link, hiring_manager_email)
 
                         app = create_application(
                             company=company,
