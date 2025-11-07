@@ -158,16 +158,13 @@ def get_text_chunks(text):
     return chunks   
 
 def _load_vector_store(collection_name="personal_assistant"):
-    """Load the vector store."""
+    """Load the vector store (user-specific)."""
     try:
-        store_path = f"./vector_store_{collection_name}"
-        return MilvusVectorStore(store_path=store_path)
+        return MilvusVectorStore()
     except Exception as e:
         print(f"Error loading vector store: {e}. Creating new store.")
-        store_path = f"./vector_store_{collection_name}"
         return MilvusVectorStore.from_texts(
-            texts=get_text_chunks("Loading some documents first"),
-            store_path=store_path
+            texts=get_text_chunks("Loading some documents first")
         )
 
 
@@ -248,7 +245,19 @@ def get_urls(url):
     return urls
 
 
+def login_screen():
+    st.header("Please log in to access Upload Documents")
+    st.subheader("Please log in.")
+    st.button("Log in with Google", on_click=st.login)
+
+
 def main():
+    st.set_page_config(page_title="Upload Documents", page_icon="📚", layout="wide")
+    
+    if not st.user.is_logged_in:
+        login_screen()
+        return
+    
     st.title("Knowledge Assistant")
     st.header("Adding Documents to your knowledge base")
     st.write("Upload some documents to get started")
@@ -504,6 +513,10 @@ def main():
 
     st.write("This is how to setup secrets in streamlit at local environment https://docs.streamlit.io/develop/concepts/connections/secrets-management")
     st.write("This is how to setup secrets in streamlit at cloud https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management")
+    
+    # Logout button
+    st.divider()
+    st.button("Log out", on_click=st.logout)
 
 if __name__ == "__main__":
     main()

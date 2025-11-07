@@ -209,14 +209,12 @@ def show_application_detail(db: JobSearchDB, app_id: str):
     with col2:
         if st.button("← Back to List"):
             del st.session_state['view_application_id']
-            if 'edit_mode' in st.session_state:
-                del st.session_state['edit_mode']
             st.rerun()
 
     st.divider()
 
     # Tabs for organization
-    tab1, tab2, tab3, tab4 = st.tabs(["📝 Details", "📊 Analysis", "📅 Timeline", "⚙️ Actions"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📝 Details", "📊 Analysis", "📅 Timeline", "✏️ Edit Application"])
 
     with tab1:
         st.subheader("Application Details")
@@ -386,112 +384,101 @@ def show_application_detail(db: JobSearchDB, app_id: str):
                     st.rerun()
 
     with tab4:
-        st.subheader("Application Actions")
+        # Edit form - shown directly
+        st.markdown("### ✏️ Edit Application Details")
 
-        if st.button("✏️ Edit Application", use_container_width=True):
-            st.session_state['edit_mode'] = not st.session_state.get('edit_mode', False)
-            st.rerun()
+        with st.expander("Edit Form", expanded=True):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                new_company = st.text_input("Company", value=app.company)
+                new_role = st.text_input("Role", value=app.role)
+                new_location = st.text_input("Location", value=app.location or "")
+
+            with col2:
+                new_status = st.selectbox(
+                    "Status",
+                    ["applied", "screening", "interview", "offer", "accepted", "rejected", "withdrawn"],
+                    index=["applied", "screening", "interview", "offer", "accepted", "rejected", "withdrawn"].index(app.status)
+                )
+                new_applied_date = st.date_input(
+                    "Applied Date",
+                    value=datetime.strptime(app.applied_date, "%Y-%m-%d")
+                )
+                new_salary_range = st.text_input("Salary Range", value=app.salary_range or "")
+
+            new_job_url = st.text_input("Job URL", value=app.job_url or "")
+
+            new_job_description = st.text_area(
+                "Job Description",
+                value=app.job_description or "",
+                height=200
+            )
+
+            new_notes = st.text_area(
+                "Notes",
+                value=app.notes or "",
+                height=150
+            )
+
+            st.markdown("**Key Contacts**")
+            edit_contact_col1, edit_contact_col2 = st.columns(2)
+
+            with edit_contact_col1:
+                recruiter_name_value = st.text_input(
+                    "Recruiter Name",
+                    value=app.recruiter_contact.name if app.recruiter_contact and app.recruiter_contact.name else "",
+                    key=f"edit_recruiter_name_{app.id}"
+                )
+                recruiter_link_value = st.text_input(
+                    "Recruiter Contact Link",
+                    value=app.recruiter_contact.url if app.recruiter_contact and app.recruiter_contact.url else "",
+                    key=f"edit_recruiter_link_{app.id}"
+                )
+
+            with edit_contact_col2:
+                hiring_manager_name_value = st.text_input(
+                    "Hiring Manager Name",
+                    value=app.hiring_manager_contact.name if app.hiring_manager_contact and app.hiring_manager_contact.name else "",
+                    key=f"edit_hiring_manager_name_{app.id}"
+                )
+                hiring_manager_link_value = st.text_input(
+                    "Hiring Manager Contact Link",
+                    value=app.hiring_manager_contact.url if app.hiring_manager_contact and app.hiring_manager_contact.url else "",
+                    key=f"edit_hiring_manager_link_{app.id}"
+                )
+
+            # Action buttons
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button("💾 Save Changes", type="primary", use_container_width=True):
+                    # Prepare updates
+                    updates = {
+                        'company': new_company,
+                        'role': new_role,
+                        'location': new_location if new_location else None,
+                        'status': new_status,
+                        'applied_date': new_applied_date.strftime("%Y-%m-%d"),
+                        'salary_range': new_salary_range if new_salary_range else None,
+                        'job_url': new_job_url if new_job_url else None,
+                        'job_description': new_job_description if new_job_description else None,
+                        'notes': new_notes if new_notes else None,
+                        'recruiter_contact': build_contact_link(recruiter_name_value, recruiter_link_value),
+                        'hiring_manager_contact': build_contact_link(hiring_manager_name_value, hiring_manager_link_value)
+                    }
+
+                    # Update in database
+                    db.update_application(app_id, updates)
+
+                    st.success("✅ Application updated successfully!")
+                    st.rerun()
+
+            with col2:
+                if st.button("✕ Cancel", use_container_width=True):
+                    st.rerun()
 
         st.divider()
-
-        # Edit form
-        if st.session_state.get('edit_mode', False):
-            st.markdown("### ✏️ Edit Application")
-
-            with st.expander("Edit Form", expanded=True):
-                col1, col2 = st.columns(2)
-
-                with col1:
-                    new_company = st.text_input("Company", value=app.company)
-                    new_role = st.text_input("Role", value=app.role)
-                    new_location = st.text_input("Location", value=app.location or "")
-
-                with col2:
-                    new_status = st.selectbox(
-                        "Status",
-                        ["applied", "screening", "interview", "offer", "accepted", "rejected", "withdrawn"],
-                        index=["applied", "screening", "interview", "offer", "accepted", "rejected", "withdrawn"].index(app.status)
-                    )
-                    new_applied_date = st.date_input(
-                        "Applied Date",
-                        value=datetime.strptime(app.applied_date, "%Y-%m-%d")
-                    )
-                    new_salary_range = st.text_input("Salary Range", value=app.salary_range or "")
-
-                new_job_url = st.text_input("Job URL", value=app.job_url or "")
-
-                new_job_description = st.text_area(
-                    "Job Description",
-                    value=app.job_description or "",
-                    height=200
-                )
-
-                new_notes = st.text_area(
-                    "Notes",
-                    value=app.notes or "",
-                    height=150
-                )
-
-                st.markdown("**Key Contacts**")
-                edit_contact_col1, edit_contact_col2 = st.columns(2)
-
-                with edit_contact_col1:
-                    recruiter_name_value = st.text_input(
-                        "Recruiter Name",
-                        value=app.recruiter_contact.name if app.recruiter_contact and app.recruiter_contact.name else "",
-                        key=f"edit_recruiter_name_{app.id}"
-                    )
-                    recruiter_link_value = st.text_input(
-                        "Recruiter Contact Link",
-                        value=app.recruiter_contact.url if app.recruiter_contact and app.recruiter_contact.url else "",
-                        key=f"edit_recruiter_link_{app.id}"
-                    )
-
-                with edit_contact_col2:
-                    hiring_manager_name_value = st.text_input(
-                        "Hiring Manager Name",
-                        value=app.hiring_manager_contact.name if app.hiring_manager_contact and app.hiring_manager_contact.name else "",
-                        key=f"edit_hiring_manager_name_{app.id}"
-                    )
-                    hiring_manager_link_value = st.text_input(
-                        "Hiring Manager Contact Link",
-                        value=app.hiring_manager_contact.url if app.hiring_manager_contact and app.hiring_manager_contact.url else "",
-                        key=f"edit_hiring_manager_link_{app.id}"
-                    )
-
-                # Action buttons
-                col1, col2 = st.columns(2)
-
-                with col1:
-                    if st.button("💾 Save Changes", type="primary", use_container_width=True):
-                        # Prepare updates
-                        updates = {
-                            'company': new_company,
-                            'role': new_role,
-                            'location': new_location if new_location else None,
-                            'status': new_status,
-                            'applied_date': new_applied_date.strftime("%Y-%m-%d"),
-                            'salary_range': new_salary_range if new_salary_range else None,
-                            'job_url': new_job_url if new_job_url else None,
-                            'job_description': new_job_description if new_job_description else None,
-                            'notes': new_notes if new_notes else None,
-                            'recruiter_contact': build_contact_link(recruiter_name_value, recruiter_link_value),
-                            'hiring_manager_contact': build_contact_link(hiring_manager_name_value, hiring_manager_link_value)
-                        }
-
-                        # Update in database
-                        db.update_application(app_id, updates)
-
-                        st.success("✅ Application updated successfully!")
-                        st.session_state['edit_mode'] = False
-                        st.rerun()
-
-                with col2:
-                    if st.button("✕ Cancel", use_container_width=True):
-                        st.session_state['edit_mode'] = False
-                        st.rerun()
-
-            st.divider()
 
         # Danger zone
         with st.expander("🗑️ Danger Zone"):
@@ -508,8 +495,18 @@ def show_application_detail(db: JobSearchDB, app_id: str):
                     st.warning("Click again to confirm deletion")
 
 
+def login_screen():
+    st.header("Please log in to access Applications")
+    st.subheader("Please log in.")
+    st.button("Log in with Google", on_click=st.login)
+
+
 def main():
     st.set_page_config(page_title="Applications", page_icon="📝", layout="wide")
+
+    if not st.user.is_logged_in:
+        login_screen()
+        return
 
     st.title("📝 Job Applications")
     st.markdown("Manage all your job applications in one place")
@@ -736,6 +733,10 @@ def main():
         st.divider()
         with st.expander("⚡ Bulk Actions"):
             st.write("Coming soon: Export to CSV, Bulk status update, etc.")
+    
+    # Logout button
+    st.divider()
+    st.button("Log out", on_click=st.logout)
 
 
 if __name__ == "__main__":

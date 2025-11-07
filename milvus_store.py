@@ -11,13 +11,30 @@ try:
 except ImportError:
     HAS_STREAMLIT = False
 
+try:
+    from storage.user_utils import get_user_collection_name, get_user_id
+    HAS_USER_UTILS = True
+except ImportError:
+    HAS_USER_UTILS = False
+
 class MilvusVectorStore:
     def __init__(
         self,
-        collection_name: str = "personal_assistant",
+        collection_name: str = None,
         embedding_model: str = "models/gemini-embedding-001",
-        connection_args: Optional[dict] = None
+        connection_args: Optional[dict] = None,
+        user_id: str = None
     ):
+        if collection_name is None:
+            if HAS_USER_UTILS:
+                try:
+                    collection_name = get_user_collection_name("personal_assistant", user_id)
+                except (ValueError, AttributeError):
+                    # Fallback if user not logged in
+                    collection_name = "personal_assistant"
+            else:
+                collection_name = "personal_assistant"
+        
         self.collection_name = collection_name
         self.embedding = GoogleGenerativeAIEmbeddings(model=embedding_model)
 
@@ -137,14 +154,16 @@ class MilvusVectorStore:
         texts: List[str],
         embedding_model: str = "models/gemini-embedding-001",
         metadatas: Optional[List[dict]] = None,
-        collection_name: str = "personal_assistant",
-        connection_args: Optional[dict] = None
+        collection_name: str = None,
+        connection_args: Optional[dict] = None,
+        user_id: str = None
     ):
         """Create a MilvusVectorStore from texts."""
         store = cls(
             collection_name=collection_name,
             embedding_model=embedding_model,
-            connection_args=connection_args
+            connection_args=connection_args,
+            user_id=user_id
         )
         store.add_texts(texts, metadatas)
         return store

@@ -10,19 +10,27 @@ import os
 from typing import List, Optional, Dict, Callable
 from datetime import datetime
 from models.application import Application
+from storage.user_utils import get_user_data_dir
+from storage.encryption import encrypt_data, decrypt_data, is_encryption_enabled
 
 
 class JobSearchDB:
     """Simple JSON database for job search data"""
 
-    def __init__(self, data_dir: str = "./job_search_data"):
+    def __init__(self, data_dir: str = None, user_id: str = None):
         """
         Initialize database.
 
         Args:
-            data_dir: Directory to store JSON files
+            data_dir: Directory to store JSON files (if None, uses user-specific directory)
+            user_id: Optional user ID (if None, will try to get from Streamlit)
         """
+        if data_dir is None:
+            data_dir = get_user_data_dir("job_search_data", user_id)
+        
         self.data_dir = data_dir
+        self.user_id = user_id
+        self._encryption_enabled = is_encryption_enabled()
         os.makedirs(data_dir, exist_ok=True)
 
         self.applications_file = os.path.join(data_dir, "applications.json")
@@ -37,23 +45,50 @@ class JobSearchDB:
     def _init_file(self, filepath: str, default_content):
         """Create file with default content if it doesn't exist"""
         if not os.path.exists(filepath):
-            with open(filepath, 'w') as f:
-                json.dump(default_content, f, indent=2)
+            self._write_json(filepath, default_content)
 
     def _read_json(self, filepath: str):
-        """Read JSON file"""
+        """Read JSON file (with optional decryption)"""
         try:
-            with open(filepath, 'r') as f:
-                return json.load(f)
+            if self._encryption_enabled:
+                # Read encrypted file as binary
+                with open(filepath, 'rb') as f:
+                    encrypted_data = f.read()
+                    if encrypted_data:
+                        decrypted_data = decrypt_data(encrypted_data, self.user_id)
+                        return json.loads(decrypted_data.decode('utf-8'))
+                    else:
+                        return [] if filepath != self.profile_file else {}
+            else:
+                # Read plain JSON file
+                with open(filepath, 'r') as f:
+                    return json.load(f)
         except (FileNotFoundError, json.JSONDecodeError) as e:
             print(f"Error reading {filepath}: {e}")
             return [] if filepath != self.profile_file else {}
+        except Exception as e:
+            # If decryption fails, try reading as plain JSON (for migration)
+            try:
+                with open(filepath, 'r') as f:
+                    return json.load(f)
+            except:
+                print(f"Error reading {filepath}: {e}")
+                return [] if filepath != self.profile_file else {}
 
     def _write_json(self, filepath: str, data):
-        """Write JSON file"""
+        """Write JSON file (with optional encryption)"""
         try:
-            with open(filepath, 'w') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
+            json_data = json.dumps(data, indent=2, ensure_ascii=False)
+            
+            if self._encryption_enabled:
+                # Write encrypted file as binary
+                encrypted_data = encrypt_data(json_data.encode('utf-8'), self.user_id)
+                with open(filepath, 'wb') as f:
+                    f.write(encrypted_data)
+            else:
+                # Write plain JSON file
+                with open(filepath, 'w') as f:
+                    f.write(json_data)
         except Exception as e:
             print(f"Error writing {filepath}: {e}")
             raise

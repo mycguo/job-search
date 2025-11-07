@@ -100,8 +100,8 @@ def save_to_knowledge_base(information, enrich=True):
             'original': information if enrich else None
         }
 
-        # Get vector store and add text
-        vector_store = MilvusVectorStore(store_path="./vector_store_personal_assistant")
+        # Get vector store and add text (user-specific)
+        vector_store = MilvusVectorStore()
         text_chunks = get_text_chunks(enriched_info)
 
         # Add metadata to each chunk
@@ -479,8 +479,8 @@ def user_input(user_question):
         else:
             st.error(f"❌ Failed to save: {result}")
     else:
-        # Normal question answering
-        vector_store = MilvusVectorStore(store_path="./vector_store_personal_assistant")
+        # Normal question answering (user-specific)
+        vector_store = MilvusVectorStore()
         docs = vector_store.similarity_search(user_question)
 
         chain = get_chat_chain()
@@ -517,8 +517,18 @@ def download_faiss_from_s3():
     # Migration from S3-stored FAISS can be done with MilvusVectorStore.migrate_from_faiss()
     print("Milvus uses its own persistence. Migration from FAISS can be done if needed.")
 
+def login_screen():
+    st.header("Please log in to access Job Search Agent")
+    st.subheader("Please log in.")
+    st.button("Log in with Google", on_click=st.login)
+
+
 def main():
     st.set_page_config(page_title="Job Search Agent", page_icon="🎯", layout="wide")
+
+    if not st.user.is_logged_in:
+        login_screen()
+        return
 
     st.title("🎯 Job Search Agent")
     st.markdown("Your AI-powered career companion")
@@ -661,7 +671,12 @@ def main():
     st.markdown("""
         ---
         **Tech Stack:** Streamlit • Gemini 2.5 Flash • Google Embeddings • RAG • LangChain
-    """)    
+    """)
+    
+    # Logout button in sidebar
+    with st.sidebar:
+        st.divider()
+        st.button("Log out", on_click=st.logout)
 
 if __name__ == "__main__":
     main()

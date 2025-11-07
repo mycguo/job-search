@@ -745,8 +745,18 @@ def show_resume_detail(db: ResumeDB, resume_id: str):
                         st.warning("Click again to confirm deletion")
 
 
+def login_screen():
+    st.header("Please log in to access Resume Management")
+    st.subheader("Please log in.")
+    st.button("Log in with Google", on_click=st.login)
+
+
 def main():
     st.set_page_config(page_title="Resume Management", page_icon="📄", layout="wide")
+
+    if not st.user.is_logged_in:
+        login_screen()
+        return
 
     st.title("📄 Resume Management")
     st.markdown("Upload, view, and manage your resumes")
@@ -857,6 +867,10 @@ def main():
     with col3:
         if st.button("📝 Applications", use_container_width=True):
             st.switch_page("pages/applications.py")
+    
+    # Logout button
+    st.divider()
+    st.button("Log out", on_click=st.logout)
 
 
 if __name__ == "__main__":
