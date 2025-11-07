@@ -17,6 +17,7 @@ import random
 sys.path.insert(0, '.')
 
 from storage.interview_db import InterviewDB
+from storage.auth_utils import is_user_logged_in, login, logout
 from models.interview_prep import (
     create_interview_question,
     create_technical_concept,
@@ -1050,13 +1051,13 @@ def show_recent_questions(db: InterviewDB, limit: int = 10):
 def login_screen():
     st.header("Please log in to access Interview Prep")
     st.subheader("Please log in.")
-    st.button("Log in with Google", on_click=st.login)
+    st.button("Log in with Google", on_click=login)
 
 
 def main():
     st.set_page_config(page_title="Interview Prep", page_icon="🎯", layout="wide")
 
-    if not st.user.is_logged_in:
+    if not is_user_logged_in():
         login_screen()
         return
 
@@ -1221,7 +1222,7 @@ def main():
     
     # Logout button
     st.divider()
-    st.button("Log out", on_click=st.logout)
+    st.button("Log out", on_click=logout)
 
 
 if __name__ == "__main__":

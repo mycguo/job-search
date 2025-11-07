@@ -15,6 +15,7 @@ sys.path.insert(0, '.')
 
 from storage.json_db import JobSearchDB
 from models.application import Application, ApplicationEvent
+from storage.auth_utils import is_user_logged_in, login, logout
 
 
 def parse_interview_from_event(event: ApplicationEvent, app: Application) -> Optional[Dict]:
@@ -187,13 +188,13 @@ def format_interview_type(interview: Dict) -> str:
 def login_screen():
     st.header("Please log in to access Interview Schedule")
     st.subheader("Please log in.")
-    st.button("Log in with Google", on_click=st.login)
+    st.button("Log in with Google", on_click=login)
 
 
 def main():
     st.set_page_config(page_title="Interview Schedule", page_icon="📅", layout="wide")
     
-    if not st.user.is_logged_in:
+    if not is_user_logged_in():
         login_screen()
         return
     
@@ -287,7 +288,7 @@ def main():
     
     # Logout button
     st.divider()
-    st.button("Log out", on_click=st.logout)
+    st.button("Log out", on_click=logout)
 
 
 if __name__ == "__main__":

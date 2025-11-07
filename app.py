@@ -10,13 +10,10 @@ from langchain.prompts import PromptTemplate
 from pages.upload_docs import get_vector_store, get_text_chunks
 from langchain.chains.combine_documents import create_stuff_documents_chain
 import boto3
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
 
 genai.configure(api_key=os.getenv("GENAI_API_KEY"))
 os.environ["USER_AGENT"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-
-nvidia_api_key = st.secrets["NVIDIA_API_KEY"]
 
 def get_prompt_template():
     return PromptTemplate()
@@ -517,16 +514,19 @@ def download_faiss_from_s3():
     # Migration from S3-stored FAISS can be done with MilvusVectorStore.migrate_from_faiss()
     print("Milvus uses its own persistence. Migration from FAISS can be done if needed.")
 
+from storage.auth_utils import is_user_logged_in, login, logout
+
+
 def login_screen():
     st.header("Please log in to access Job Search Agent")
     st.subheader("Please log in.")
-    st.button("Log in with Google", on_click=st.login)
+    st.button("Log in with Google", on_click=login)
 
 
 def main():
     st.set_page_config(page_title="Job Search Agent", page_icon="🎯", layout="wide")
 
-    if not st.user.is_logged_in:
+    if not is_user_logged_in():
         login_screen()
         return
 
@@ -669,7 +669,7 @@ def main():
 
     st.markdown("<div style='height:200px;'></div>", unsafe_allow_html=True)
     st.markdown("---")
-    st.button("Log out", on_click=st.logout, use_container_width=True)
+    st.button("Log out", on_click=logout, use_container_width=True)
 
 if __name__ == "__main__":
     main()
