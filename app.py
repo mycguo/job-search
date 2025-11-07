@@ -553,7 +553,7 @@ def main():
             info_to_save = st.text_area(
                 "Information to save:",
                 placeholder="Enter any information you want to remember...\nExample: My favorite color is blue",
-                height=100,
+                height=240,
                 help="This will be added to your knowledge base immediately"
             )
 
@@ -606,7 +606,7 @@ def main():
     st.markdown("Ask questions, track applications, or save information naturally")
 
     # Quick action buttons
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         if st.button("📊 Dashboard", use_container_width=True):
             st.switch_page("pages/dashboard.py")
@@ -622,9 +622,6 @@ def main():
     with col5:
         if st.button("📋 View All Apps", use_container_width=True):
             st.switch_page("pages/applications.py")
-    with col6:
-        if st.button("📚 Upload Docs", use_container_width=True):
-            st.switch_page("pages/app_admin.py")
 
     st.divider()
 
