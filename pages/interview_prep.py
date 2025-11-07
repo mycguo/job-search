@@ -288,59 +288,85 @@ def show_upload_document_form(db: InterviewDB):
                             st.success(f"✅ Document stored in knowledge base ({chunks} chunks)")
                         return
 
-                    # Show parsed questions
-                    st.success(f"✅ Found {len(result)} questions!")
+                    # Store parsed questions in session state for review
+                    st.session_state['parsed_questions'] = result
+                    st.session_state['parsed_metadata'] = doc_metadata
+                    st.success(f"✅ Found {len(result)} questions! Review them below.")
+                    st.rerun()
 
-                    with st.expander(f"📋 Review {len(result)} Parsed Questions", expanded=True):
-                        questions_to_save = st.multiselect(
-                            "Select questions to save:",
-                            range(len(result)),
-                            default=range(len(result)),
-                            format_func=lambda i: f"Q{i+1}: {result[i]['question'][:60]}..."
-                        )
 
-                        for i in questions_to_save:
-                            q_data = result[i]
-                            st.markdown(f"**Q{i+1}:** {q_data['question']}")
-                            st.caption(f"Type: {q_data.get('type', 'unknown')} | Category: {q_data.get('category', 'unknown')}")
-                            with st.expander("View Answer"):
-                                st.write(q_data['answer'])
-                            st.divider()
+def show_parsed_questions_review(db: InterviewDB):
+    """Show review interface for parsed questions (outside form)"""
+    if 'parsed_questions' not in st.session_state:
+        return
 
-                        if st.button("💾 Save Selected Questions", key="save_parsed"):
-                            saved_count = 0
-                            for i in questions_to_save:
-                                q_data = result[i]
+    result = st.session_state['parsed_questions']
+    doc_metadata = st.session_state.get('parsed_metadata', {})
 
-                                # Create question
-                                q = create_interview_question(
-                                    question=q_data['question'],
-                                    type=q_data.get('type', 'technical'),
-                                    category=q_data.get('category', category or 'general'),
-                                    difficulty='medium',  # Default
-                                    answer_full=q_data['answer'],
-                                    tags=doc_metadata['tags']
-                                )
+    st.subheader(f"📋 Review {len(result)} Parsed Questions")
 
-                                # Save to database
-                                q_id = db.add_question(q)
+    with st.expander(f"Review and Select Questions to Save", expanded=True):
+        questions_to_save = st.multiselect(
+            "Select questions to save:",
+            range(len(result)),
+            default=list(range(len(result))),
+            format_func=lambda i: f"Q{i+1}: {result[i]['question'][:60]}..."
+        )
 
-                                # Add to vector store
-                                add_question_to_vector_store(
-                                    question=q_data['question'],
-                                    answer=q_data['answer'],
-                                    metadata={
-                                        'question_id': q_id,
-                                        'type': q_data.get('type', 'technical'),
-                                        'category': q_data.get('category', 'general'),
-                                        'tags': doc_metadata['tags']
-                                    }
-                                )
-                                saved_count += 1
+        for i in questions_to_save:
+            q_data = result[i]
+            st.markdown(f"**Q{i+1}:** {q_data['question']}")
+            st.caption(f"Type: {q_data.get('type', 'unknown')} | Category: {q_data.get('category', 'unknown')}")
+            with st.expander("View Answer"):
+                st.write(q_data['answer'])
+            st.divider()
 
-                            st.success(f"✅ Saved {saved_count} questions!")
-                            st.balloons()
-                            st.rerun()
+    col1, col2 = st.columns([1, 4])
+
+    with col1:
+        if st.button("💾 Save Selected Questions", key="save_parsed", type="primary"):
+            saved_count = 0
+            for i in questions_to_save:
+                q_data = result[i]
+
+                # Create question
+                q = create_interview_question(
+                    question=q_data['question'],
+                    type=q_data.get('type', 'technical'),
+                    category=q_data.get('category', doc_metadata.get('category', 'general')),
+                    difficulty='medium',  # Default
+                    answer_full=q_data['answer'],
+                    tags=doc_metadata.get('tags', [])
+                )
+
+                # Save to database
+                q_id = db.add_question(q)
+
+                # Add to vector store
+                add_question_to_vector_store(
+                    question=q_data['question'],
+                    answer=q_data['answer'],
+                    metadata={
+                        'question_id': q_id,
+                        'type': q_data.get('type', 'technical'),
+                        'category': q_data.get('category', 'general'),
+                        'tags': doc_metadata.get('tags', [])
+                    }
+                )
+                saved_count += 1
+
+            st.success(f"✅ Saved {saved_count} questions!")
+            # Clear session state
+            del st.session_state['parsed_questions']
+            del st.session_state['parsed_metadata']
+            st.balloons()
+            st.rerun()
+
+    with col2:
+        if st.button("✕ Cancel", key="cancel_parsed"):
+            del st.session_state['parsed_questions']
+            del st.session_state['parsed_metadata']
+            st.rerun()
 
 
 def show_add_question_form(db: InterviewDB):
@@ -665,6 +691,11 @@ def main():
             st.session_state['show_add_question'] = False
             st.rerun()
 
+        st.divider()
+
+    # Show parsed questions review if available
+    if 'parsed_questions' in st.session_state:
+        show_parsed_questions_review(db)
         st.divider()
 
     # Breakdown by type

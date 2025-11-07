@@ -549,6 +549,9 @@ def main():
         if st.button("🎯 Interview Prep", use_container_width=True):
             st.switch_page("pages/interview_prep.py")
 
+        if st.button("📄 Resume Manager", use_container_width=True):
+            st.switch_page("pages/resume.py")
+
         st.divider()
 
         # Quick stats
@@ -612,7 +615,7 @@ def main():
     st.markdown("Ask questions, track applications, or save information naturally")
 
     # Quick action buttons
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
     with col1:
         if st.button("📊 Dashboard", use_container_width=True):
             st.switch_page("pages/dashboard.py")
@@ -620,12 +623,15 @@ def main():
         if st.button("🎯 Interview Prep", use_container_width=True):
             st.switch_page("pages/interview_prep.py")
     with col3:
+        if st.button("📄 Resume", use_container_width=True):
+            st.switch_page("pages/resume.py")
+    with col4:
         if st.button("➕ Add Application", use_container_width=True):
             st.switch_page("pages/applications.py")
-    with col4:
+    with col5:
         if st.button("📋 View All Apps", use_container_width=True):
             st.switch_page("pages/applications.py")
-    with col5:
+    with col6:
         if st.button("📚 Upload Docs", use_container_width=True):
             st.switch_page("pages/app_admin.py")
 
@@ -646,7 +652,7 @@ def main():
         ### Quick Start
 
         **Track Applications Naturally:**
-        - "Applied to Google for ML Engineer today"
+        - "Created job application for Applied to Google for ML Engineer today"
         - "Interview with Meta tomorrow at 2pm"
         - "Google offers $200k for this role"
 
@@ -662,6 +668,7 @@ def main():
         ### Features
         - 📊 **Dashboard** - Visualize your progress with charts and metrics
         - 🎯 **Interview Prep** - Build your personal interview toolkit
+        - 📄 **Resume Manager** - Upload and manage your resumes
         - 📝 **Track applications** - Natural language or manual entry
         - 🤖 **AI-powered matching** - Job analysis and scoring
         - 💾 **Natural language** - Just talk to track your search
