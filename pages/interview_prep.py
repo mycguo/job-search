@@ -1127,8 +1127,7 @@ def main():
 
     with col3:
         if st.button("📝 View All Questions", use_container_width=True):
-            # TODO: Navigate to questions page
-            st.info("Questions page coming soon!")
+            st.switch_page("pages/questions.py")
 
     with col4:
         if st.button("🎓 Practice Mode", use_container_width=True):
