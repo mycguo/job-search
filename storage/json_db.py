@@ -293,6 +293,45 @@ class JobSearchDB:
 
         return self.update_application(app_id, {"notes": app.notes})
 
+    def add_timeline_event(self, app_id: str, event_type: str, event_date: str, notes: Optional[str] = None) -> bool:
+        """
+        Add a timeline event to an application.
+
+        Args:
+            app_id: Application ID
+            event_type: Type of event (e.g., 'interview', 'screening', 'offer')
+            event_date: Date of the event (format: YYYY-MM-DD)
+            notes: Optional notes about the event
+
+        Returns:
+            True if successful
+        """
+        applications = self._read_json(self.applications_file)
+
+        for i, app_dict in enumerate(applications):
+            if app_dict['id'] == app_id:
+                app = Application.from_dict(app_dict)
+                
+                # Add the event using the Application's add_event method
+                # But we need to create the event with the specified date
+                from models.application import ApplicationEvent
+                event = ApplicationEvent(
+                    date=event_date,
+                    event_type=event_type,
+                    notes=notes
+                )
+                app.timeline.append(event)
+                app.updated_at = datetime.now().isoformat()
+
+                applications[i] = app.to_dict()
+                self._write_json(self.applications_file, applications)
+
+                print(f"✅ Added timeline event: {event_type} on {event_date}")
+                return True
+
+        print(f"❌ Application not found: {app_id}")
+        return False
+
     # ==================== STATISTICS ====================
 
     def get_stats(self) -> Dict:
