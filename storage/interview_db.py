@@ -16,19 +16,27 @@ from models.interview_prep import (
     CompanyResearch,
     PracticeSession
 )
+from storage.user_utils import get_user_data_dir
+from storage.encryption import encrypt_data, decrypt_data, is_encryption_enabled
 
 
 class InterviewDB:
     """Database for interview preparation materials"""
 
-    def __init__(self, data_dir: str = "./interview_data"):
+    def __init__(self, data_dir: str = None, user_id: str = None):
         """
         Initialize interview database.
 
         Args:
-            data_dir: Directory for storing JSON files
+            data_dir: Directory for storing JSON files (if None, uses user-specific directory)
+            user_id: Optional user ID (if None, will try to get from Streamlit)
         """
+        if data_dir is None:
+            data_dir = get_user_data_dir("interview_data", user_id)
+        
         self.data_dir = data_dir
+        self.user_id = user_id
+        self._encryption_enabled = is_encryption_enabled()
         self.questions_file = os.path.join(data_dir, "questions.json")
         self.concepts_file = os.path.join(data_dir, "concepts.json")
         self.companies_file = os.path.join(data_dir, "companies.json")
@@ -47,19 +55,40 @@ class InterviewDB:
                 self._write_json(file_path, [])
 
     def _read_json(self, file_path: str) -> List[dict]:
-        """Read JSON file"""
+        """Read JSON file (with optional decryption)"""
         try:
-            with open(file_path, 'r') as f:
-                return json.load(f)
+            if self._encryption_enabled:
+                with open(file_path, 'rb') as f:
+                    encrypted_data = f.read()
+                    if encrypted_data:
+                        decrypted_data = decrypt_data(encrypted_data, self.user_id)
+                        return json.loads(decrypted_data.decode('utf-8'))
+                    else:
+                        return []
+            else:
+                with open(file_path, 'r') as f:
+                    return json.load(f)
         except Exception as e:
-            print(f"Error reading {file_path}: {e}")
-            return []
+            # If decryption fails, try reading as plain JSON (for migration)
+            try:
+                with open(file_path, 'r') as f:
+                    return json.load(f)
+            except:
+                print(f"Error reading {file_path}: {e}")
+                return []
 
     def _write_json(self, file_path: str, data: List[dict]):
-        """Write JSON file"""
+        """Write JSON file (with optional encryption)"""
         try:
-            with open(file_path, 'w') as f:
-                json.dump(data, f, indent=2)
+            json_data = json.dumps(data, indent=2)
+            
+            if self._encryption_enabled:
+                encrypted_data = encrypt_data(json_data.encode('utf-8'), self.user_id)
+                with open(file_path, 'wb') as f:
+                    f.write(encrypted_data)
+            else:
+                with open(file_path, 'w') as f:
+                    f.write(json_data)
         except Exception as e:
             print(f"Error writing {file_path}: {e}")
 

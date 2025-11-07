@@ -13,10 +13,10 @@ def login_screen():
 
 
 def main():
-    if not st.experimental_user.is_logged_in:
+    if not st.user.is_logged_in:
         login_screen()
     else:
-        st.header(f"Welcome, {st.experimental_user.name}!")
+        st.header(f"Welcome, {st.user.name}!")
         st.title("Knowledge Assistant System Admin")
         st.header("System Admin Only: Danger Zone")
         if st.button("Upload Vector Store to S3"):

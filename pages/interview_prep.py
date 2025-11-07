@@ -88,7 +88,7 @@ def extract_text_from_file(file_bytes, filename):
 def add_question_to_vector_store(question, answer, metadata):
     """Add question and answer to vector store for semantic search"""
     try:
-        vector_store = SimpleVectorStore(store_path="./vector_store_personal_assistant")
+        vector_store = SimpleVectorStore()
 
         # Create searchable content
         content = f"""Interview Question: {question}
@@ -120,7 +120,7 @@ Tags: {', '.join(metadata.get('tags', []))}"""
 def add_document_to_vector_store(file_content, filename, metadata):
     """Add entire document to vector store for semantic search"""
     try:
-        vector_store = SimpleVectorStore(store_path="./vector_store_personal_assistant")
+        vector_store = SimpleVectorStore()
 
         # Add document metadata
         content = f"""Interview Prep Document: {filename}
@@ -1047,8 +1047,18 @@ def show_recent_questions(db: InterviewDB, limit: int = 10):
             st.divider()
 
 
+def login_screen():
+    st.header("Please log in to access Interview Prep")
+    st.subheader("Please log in.")
+    st.button("Log in with Google", on_click=st.login)
+
+
 def main():
     st.set_page_config(page_title="Interview Prep", page_icon="🎯", layout="wide")
+
+    if not st.user.is_logged_in:
+        login_screen()
+        return
 
     st.title("🎯 Interview Preparation")
     st.markdown("Build your personal interview toolkit")
@@ -1208,6 +1218,10 @@ def main():
     with col3:
         if st.button("📝 Applications", use_container_width=True):
             st.switch_page("pages/applications.py")
+    
+    # Logout button
+    st.divider()
+    st.button("Log out", on_click=st.logout)
 
 
 if __name__ == "__main__":

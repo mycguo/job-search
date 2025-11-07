@@ -9,6 +9,14 @@ import uuid
 
 
 @dataclass
+class ContactLink:
+    """Reference to a single contact person"""
+    name: Optional[str] = None
+    url: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@dataclass
 class ApplicationEvent:
     """Timeline event for an application"""
     date: str
@@ -47,6 +55,8 @@ class Application:
     notes: Optional[str] = None
     timeline: List[ApplicationEvent] = field(default_factory=list)
     job_requirements: Optional[Dict] = None  # Extracted requirements
+    recruiter_contact: Optional[ContactLink] = None
+    hiring_manager_contact: Optional[ContactLink] = None
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
     updated_at: str = field(default_factory=lambda: datetime.now().isoformat())
 
@@ -83,6 +93,13 @@ class Application:
             timeline = [ApplicationEvent(**event) if isinstance(event, dict) else event
                        for event in data['timeline']]
             data['timeline'] = timeline
+
+        # Normalize contact links
+        for contact_field in ('recruiter_contact', 'hiring_manager_contact'):
+            if contact_field in data and data[contact_field]:
+                contact_data = data[contact_field]
+                if isinstance(contact_data, dict):
+                    data[contact_field] = ContactLink(**contact_data)
         return cls(**data)
 
     def add_event(self, event_type: str, notes: Optional[str] = None):

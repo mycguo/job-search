@@ -235,8 +235,18 @@ def get_action_items(apps):
     return items
 
 
+def login_screen():
+    st.header("Please log in to access Dashboard")
+    st.subheader("Please log in.")
+    st.button("Log in with Google", on_click=st.login)
+
+
 def main():
     st.set_page_config(page_title="Dashboard", page_icon="📊", layout="wide")
+
+    if not st.user.is_logged_in:
+        login_screen()
+        return
 
     st.title("📊 Job Search Dashboard")
     st.markdown("Track your job search progress with real-time analytics")
@@ -415,6 +425,10 @@ def main():
     with col3:
         if st.button("🏠 Back to Home", use_container_width=True):
             st.switch_page("app.py")
+    
+    # Logout button
+    st.divider()
+    st.button("Log out", on_click=st.logout)
 
 
 if __name__ == "__main__":

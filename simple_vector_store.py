@@ -13,18 +13,44 @@ try:
 except ImportError:
     HAS_STREAMLIT = False
 
+try:
+    from storage.user_utils import get_user_vector_store_path, get_user_id
+    HAS_USER_UTILS = True
+except ImportError:
+    HAS_USER_UTILS = False
+
+try:
+    from storage.encryption import encrypt_data, decrypt_data, is_encryption_enabled
+    HAS_ENCRYPTION = True
+except ImportError:
+    HAS_ENCRYPTION = False
+
+
 class SimpleVectorStore:
     """A simple file-based vector store that avoids gRPC/async issues."""
 
     def __init__(
         self,
-        store_path: str = "./simple_vector_store",
-        embedding_model: str = "models/gemini-embedding-001"
+        store_path: str = None,
+        embedding_model: str = "models/gemini-embedding-001",
+        user_id: str = None
     ):
+        if store_path is None:
+            if HAS_USER_UTILS:
+                try:
+                    store_path = get_user_vector_store_path("personal_assistant", user_id)
+                except (ValueError, AttributeError):
+                    # Fallback if user not logged in
+                    store_path = "./simple_vector_store"
+            else:
+                store_path = "./simple_vector_store"
+        
         self.store_path = store_path
         self.embedding = GoogleGenerativeAIEmbeddings(model=embedding_model)
         self.vectors_file = os.path.join(store_path, "vectors.pkl")
         self.metadata_file = os.path.join(store_path, "metadata.json")
+        self.user_id = user_id
+        self._encryption_enabled = HAS_ENCRYPTION and is_encryption_enabled() if HAS_ENCRYPTION else False
 
         # Create directory if it doesn't exist
         os.makedirs(store_path, exist_ok=True)
@@ -44,13 +70,27 @@ class SimpleVectorStore:
         return []
 
     def _load_metadata(self) -> List[Dict[str, Any]]:
-        """Load metadata from file."""
+        """Load metadata from file (with optional decryption)."""
         if os.path.exists(self.metadata_file):
             try:
-                with open(self.metadata_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                if self._encryption_enabled:
+                    with open(self.metadata_file, 'rb') as f:
+                        encrypted_data = f.read()
+                        if encrypted_data:
+                            decrypted_data = decrypt_data(encrypted_data, self.user_id)
+                            return json.loads(decrypted_data.decode('utf-8'))
+                        else:
+                            return []
+                else:
+                    with open(self.metadata_file, 'r', encoding='utf-8') as f:
+                        return json.load(f)
             except Exception as e:
-                print(f"Error loading metadata: {e}")
+                # Try reading as plain JSON if decryption fails (for migration)
+                try:
+                    with open(self.metadata_file, 'r', encoding='utf-8') as f:
+                        return json.load(f)
+                except:
+                    print(f"Error loading metadata: {e}")
         return []
 
     def _save_vectors(self):
@@ -62,10 +102,17 @@ class SimpleVectorStore:
             print(f"Error saving vectors: {e}")
 
     def _save_metadata(self):
-        """Save metadata to file."""
+        """Save metadata to file (with optional encryption)."""
         try:
-            with open(self.metadata_file, 'w', encoding='utf-8') as f:
-                json.dump(self.metadata, f, ensure_ascii=False, indent=2)
+            json_data = json.dumps(self.metadata, ensure_ascii=False, indent=2)
+            
+            if self._encryption_enabled:
+                encrypted_data = encrypt_data(json_data.encode('utf-8'), self.user_id)
+                with open(self.metadata_file, 'wb') as f:
+                    f.write(encrypted_data)
+            else:
+                with open(self.metadata_file, 'w', encoding='utf-8') as f:
+                    f.write(json_data)
         except Exception as e:
             print(f"Error saving metadata: {e}")
 
@@ -227,9 +274,10 @@ class SimpleVectorStore:
         texts: List[str],
         embedding_model: str = "models/gemini-embedding-001",
         metadatas: Optional[List[dict]] = None,
-        store_path: str = "./simple_vector_store"
+        store_path: str = None,
+        user_id: str = None
     ):
         """Create a SimpleVectorStore from texts."""
-        store = cls(store_path=store_path, embedding_model=embedding_model)
+        store = cls(store_path=store_path, embedding_model=embedding_model, user_id=user_id)
         store.add_texts(texts, metadatas)
         return store
