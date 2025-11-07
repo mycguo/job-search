@@ -371,6 +371,184 @@ def add_interview_to_application(details):
     except Exception as e:
         return False, f"❌ Error adding interview: {str(e)}"
 
+def detect_data_query_intent(text):
+    """
+    Detect if user is asking a question about their application/interview data.
+    Returns (is_data_query, query_type)
+    
+    Query types: 'interview', 'application', 'stats', 'general'
+    """
+    text_lower = text.lower().strip()
+    
+    # Interview-related queries
+    interview_patterns = [
+        r'when\s+is\s+my\s+next\s+interview',
+        r'what\s+interviews\s+do\s+i\s+have',
+        r'when\s+are\s+my\s+interviews',
+        r'show\s+me\s+my\s+interviews',
+        r'upcoming\s+interviews',
+        r'next\s+interview',
+        r'interview\s+schedule',
+        r'when\s+is\s+my\s+interview',
+    ]
+    
+    # Application-related queries
+    application_patterns = [
+        r'what\s+companies\s+have\s+i\s+applied\s+to',
+        r'what\s+applications\s+do\s+i\s+have',
+        r'show\s+me\s+my\s+applications',
+        r'list\s+my\s+applications',
+        r'active\s+applications',
+        r'application\s+status',
+        r'how\s+many\s+applications',
+    ]
+    
+    # Stats queries
+    stats_patterns = [
+        r'response\s+rate',
+        r'how\s+many\s+interviews',
+        r'application\s+stats',
+        r'job\s+search\s+stats',
+    ]
+    
+    for pattern in interview_patterns:
+        if re.search(pattern, text_lower):
+            return True, 'interview'
+    
+    for pattern in application_patterns:
+        if re.search(pattern, text_lower):
+            return True, 'application'
+    
+    for pattern in stats_patterns:
+        if re.search(pattern, text_lower):
+            return True, 'stats'
+    
+    return False, None
+
+
+def answer_data_query(question: str, query_type: str):
+    """
+    Answer questions about application/interview data by querying the database.
+    
+    Args:
+        question: The user's question
+        query_type: 'interview', 'application', or 'stats'
+    
+    Returns:
+        Formatted answer string
+    """
+    try:
+        from storage.json_db import JobSearchDB
+        from pages.interview_schedule import get_all_interviews
+        from datetime import datetime, timedelta
+        
+        db = JobSearchDB()
+        
+        if query_type == 'interview':
+            interviews = get_all_interviews(db)
+            
+            if not interviews:
+                return "📅 You don't have any interviews scheduled yet. Add interview events to your applications to track them!"
+            
+            # Filter upcoming interviews
+            today = datetime.now().date()
+            upcoming_interviews = []
+            for interview in interviews:
+                try:
+                    interview_date = datetime.strptime(interview['date'], "%Y-%m-%d").date()
+                    if interview_date >= today:
+                        upcoming_interviews.append(interview)
+                except:
+                    pass
+            
+            if not upcoming_interviews:
+                return "📅 You don't have any upcoming interviews. All your interviews are in the past."
+            
+            # Get the next interview
+            next_interview = upcoming_interviews[0]
+            interview_date = datetime.strptime(next_interview['date'], "%Y-%m-%d")
+            
+            # Format the answer
+            date_str = interview_date.strftime("%B %d, %Y")
+            time_str = next_interview.get('time', 'Time TBD')
+            company = next_interview['company']
+            role = next_interview['role']
+            interview_type = next_interview.get('type', 'interview').title()
+            
+            answer = f"📅 **Your next interview:**\n\n"
+            answer += f"🏢 **Company:** {company}\n"
+            answer += f"💼 **Role:** {role}\n"
+            answer += f"📅 **Date:** {date_str}\n"
+            answer += f"🕐 **Time:** {time_str}\n"
+            answer += f"📝 **Type:** {interview_type}\n"
+            
+            if next_interview.get('interviewer'):
+                answer += f"👤 **Interviewer:** {next_interview['interviewer']}\n"
+            
+            if len(upcoming_interviews) > 1:
+                answer += f"\n💡 You have {len(upcoming_interviews)} upcoming interviews total."
+            
+            return answer
+        
+        elif query_type == 'application':
+            applications = db.list_applications()
+            
+            if not applications:
+                return "📝 You haven't applied to any companies yet. Start tracking your applications!"
+            
+            # Get unique companies
+            companies = set()
+            active_count = 0
+            for app in applications:
+                companies.add(app.company)
+                if app.status.lower() in ['applied', 'interview', 'offer']:
+                    active_count += 1
+            
+            answer = f"📝 **Your Applications:**\n\n"
+            answer += f"🏢 **Companies applied to:** {', '.join(sorted(companies))}\n"
+            answer += f"📊 **Total applications:** {len(applications)}\n"
+            answer += f"✅ **Active applications:** {active_count}\n"
+            
+            # Show recent applications
+            recent_apps = sorted(applications, key=lambda x: x.applied_date or '', reverse=True)[:5]
+            if recent_apps:
+                answer += f"\n📋 **Recent applications:**\n"
+                for app in recent_apps:
+                    status_emoji = {
+                        'applied': '📝',
+                        'interview': '📅',
+                        'offer': '🎉',
+                        'rejected': '❌',
+                        'withdrawn': '🚫'
+                    }.get(app.status.lower(), '📄')
+                    answer += f"  {status_emoji} {app.company} - {app.role} ({app.status})\n"
+            
+            return answer
+        
+        elif query_type == 'stats':
+            applications = db.list_applications()
+            stats = db.get_stats()
+            interviews = get_all_interviews(db)
+            
+            today = datetime.now().date()
+            upcoming_interviews = [i for i in interviews 
+                                 if datetime.strptime(i['date'], "%Y-%m-%d").date() >= today]
+            
+            answer = f"📊 **Your Job Search Stats:**\n\n"
+            answer += f"📝 **Total Applications:** {stats['total']}\n"
+            answer += f"✅ **Active Applications:** {stats['active']}\n"
+            answer += f"📈 **Response Rate:** {stats['response_rate']}%\n"
+            answer += f"📅 **Total Interviews:** {len(interviews)}\n"
+            answer += f"🔜 **Upcoming Interviews:** {len(upcoming_interviews)}\n"
+            
+            return answer
+        
+        return "❌ Could not answer that question."
+        
+    except Exception as e:
+        return f"❌ Error querying data: {str(e)}"
+
+
 def get_chat_chain():
     prompt_template="""
     Answer the questions based on local konwledge base honestly
@@ -476,16 +654,25 @@ def user_input(user_question):
         else:
             st.error(f"❌ Failed to save: {result}")
     else:
-        # Normal question answering (user-specific)
-        vector_store = MilvusVectorStore()
-        docs = vector_store.similarity_search(user_question)
+        # Check if this is a data query (about interviews/applications)
+        is_data_query, query_type = detect_data_query_intent(user_question)
+        
+        if is_data_query:
+            # Answer from database
+            with st.spinner("Querying your data..."):
+                answer = answer_data_query(user_question, query_type)
+                st.markdown(answer)
+        else:
+            # Normal question answering (user-specific) - use vector store
+            vector_store = MilvusVectorStore()
+            docs = vector_store.similarity_search(user_question)
 
-        chain = get_chat_chain()
+            chain = get_chat_chain()
 
-        response = chain.invoke({"context": docs, "questions": user_question})
+            response = chain.invoke({"context": docs, "questions": user_question})
 
-        print(response)
-        st.write("Reply: ", response)
+            print(response)
+            st.write("Reply: ", response)
 
 
 def download_s3_bucket(bucket_name, download_dir):
@@ -606,7 +793,7 @@ def main():
     st.markdown("Ask questions, track applications, or save information naturally")
 
     # Quick action buttons
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         if st.button("📊 Dashboard", use_container_width=True):
             st.switch_page("pages/dashboard.py")
@@ -620,9 +807,6 @@ def main():
         if st.button("📄 Resume", use_container_width=True):
             st.switch_page("pages/resume.py")
     with col5:
-        if st.button("➕ Add Application", use_container_width=True):
-            st.switch_page("pages/applications.py")
-    with col6:
         if st.button("📋 View All Apps", use_container_width=True):
             st.switch_page("pages/applications.py")
 
@@ -643,7 +827,7 @@ def main():
         ### Quick Start
 
         **Track Applications Naturally:**
-        - "Created job application for Applied to Google for ML Engineer today"
+        - "Applied at Amazon for Data Scientist today"
         - "Interview with Meta tomorrow at 2pm"
         - "Google offers $200k for this role"
 

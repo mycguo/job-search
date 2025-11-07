@@ -367,7 +367,7 @@ def show_application_detail(db: JobSearchDB, app_id: str):
         # Add event
         st.subheader("Add Timeline Event")
         with st.form(f"add_event_{app.id}"):
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             with col1:
                 event_type = st.selectbox(
                     "Event Type",
@@ -375,13 +375,25 @@ def show_application_detail(db: JobSearchDB, app_id: str):
                 )
             with col2:
                 event_date = st.date_input("Event Date", value=datetime.now())
+            with col3:
+                event_time = st.time_input("Event Time", value=datetime.now().time())
 
             event_notes = st.text_area("Notes", placeholder="Add details about this event...")
 
             if st.form_submit_button("Add Event"):
-                # Add timeline event with the specified date
+                # Add timeline event with the specified date and time
                 event_date_str = event_date.strftime("%Y-%m-%d")
-                success = db.add_timeline_event(app.id, event_type, event_date_str, event_notes)
+                event_time_str = event_time.strftime("%I:%M %p")
+                
+                # Include time in notes if provided
+                notes_with_time = event_notes
+                if event_time_str:
+                    if notes_with_time:
+                        notes_with_time = f"Time: {event_time_str}\n{notes_with_time}"
+                    else:
+                        notes_with_time = f"Time: {event_time_str}"
+                
+                success = db.add_timeline_event(app.id, event_type, event_date_str, notes_with_time)
                 
                 if success:
                     st.success("✅ Event added to timeline!")
