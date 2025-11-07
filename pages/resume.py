@@ -259,13 +259,6 @@ def show_resume_detail(db: ResumeDB, resume_id: str):
             with col2:
                 st.caption(f"Original file: {resume.original_filename}")
 
-        st.text_area(
-            "Full Text",
-            value=resume.full_text,
-            height=400,
-            help="Full text content of your resume"
-        )
-
         if resume.skills:
             st.subheader("🔧 Detected Skills")
             st.write(", ".join(resume.skills))

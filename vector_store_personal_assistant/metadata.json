@@ -491,5 +491,320 @@
     "id": "doc_86_1762481548.490478",
     "text": "Loading your knowledge base for job search insights",
     "timestamp": "2025-11-06T18:12:28.490525"
+  },
+  {
+    "id": "doc_87_1762481737.115221",
+    "text": "Loading your knowledge base for job search insights",
+    "timestamp": "2025-11-06T18:15:37.115237"
+  },
+  {
+    "id": "doc_88_1762481763.259034",
+    "text": "Loading your knowledge base for job search insights",
+    "timestamp": "2025-11-06T18:16:03.259053"
+  },
+  {
+    "id": "doc_89_1762481814.286979",
+    "text": "Loading your knowledge base for job search insights",
+    "timestamp": "2025-11-06T18:16:54.287010"
+  },
+  {
+    "id": "doc_90_1762481835.055093",
+    "text": "Loading your knowledge base for job search insights",
+    "timestamp": "2025-11-06T18:17:15.055104"
+  },
+  {
+    "id": "doc_91_1762481855.019335",
+    "text": "Loading your knowledge base for job search insights",
+    "timestamp": "2025-11-06T18:17:35.019350"
+  },
+  {
+    "id": "doc_92_1762481969.545689",
+    "text": "Loading your knowledge base for job search insights",
+    "timestamp": "2025-11-06T18:19:29.545698"
+  },
+  {
+    "id": "doc_93_1762481987.218777",
+    "text": "Loading your knowledge base for job search insights",
+    "timestamp": "2025-11-06T18:19:47.218817"
+  },
+  {
+    "id": "doc_94_1762482116.729562",
+    "text": "Interview Question: Tell me about a time when you were not able to meet a time commitment. What prevented you from meeting it? What was the outcome and what did you learn from it?\n\nAnswer: Delayed other projects because of on-prem being added: Implemented a solution which doesn’t have “wrong” requirements: Enhanced Tier to Standard Tier subscription “transaction” Revert, code fix, and data fix, and connected system data fix. Lesson learnt: Always asking why the requirement is what it is.\n\nType: behavioral\nCategory: Time Management\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:21:56.396205",
+    "source": "interview_question",
+    "question_id": "iq_7be68c4f",
+    "type": "behavioral",
+    "category": "Time Management",
+    "tags": []
+  },
+  {
+    "id": "doc_95_1762482117.077845",
+    "text": "Interview Question: Describe a long-term project that you managed. How did you keep everything moving along in a timely manner?\n\nAnswer: Develop project charter, clearly identify objective, stakeholders, communication plans etc. Develop solid project plan with verified deliverables. Regular communication to keep team informed. Resolve issues in critical paths in a timely manner. Divide it to phases with checkpoints. Identify risk early. Asking for help/resources\n\nType: behavioral\nCategory: Project Management\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:21:56.749577",
+    "source": "interview_question",
+    "question_id": "iq_cdd933c5",
+    "type": "behavioral",
+    "category": "Project Management",
+    "tags": []
+  },
+  {
+    "id": "doc_96_1762482117.430992",
+    "text": "Interview Question: Give me an example of a time when you set a goal and were able to meet or achieve it\n\nAnswer: FT stabilization: Situation: FT unstable. Not time to spend on FT. Task: Stabilize FT. Action: Creative way to do FT (multi-container, not reusing of assets). Result: FT running from more than 2 hours to less than 30 minutes, from multiple runs to one run.\n\nType: behavioral\nCategory: Goal Achievement\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:21:57.099014",
+    "source": "interview_question",
+    "question_id": "iq_b2de6b8c",
+    "type": "behavioral",
+    "category": "Goal Achievement",
+    "tags": []
+  },
+  {
+    "id": "doc_97_1762482117.771441",
+    "text": "Interview Question: Tell me about a time you had to quickly adjust your work priorities to meet changing demands.\n\nAnswer: On-Prem project\n\nType: behavioral\nCategory: Adaptability\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:21:57.453290",
+    "source": "interview_question",
+    "question_id": "iq_aea2184c",
+    "type": "behavioral",
+    "category": "Adaptability",
+    "tags": []
+  },
+  {
+    "id": "doc_98_1762482118.104947",
+    "text": "Interview Question: An example of when you had to push back to HQ or challenged a decision\n\nAnswer: Go live decision: Go/Nogo when there is a critical bug.\n\nType: behavioral\nCategory: Decision Making\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:21:57.788308",
+    "source": "interview_question",
+    "question_id": "iq_22d389f6",
+    "type": "behavioral",
+    "category": "Decision Making",
+    "tags": []
+  },
+  {
+    "id": "doc_99_1762482118.44539",
+    "text": "Interview Question: Tell me about the toughest decision you've had to make in the past six months\n\nAnswer: Let go of a new hire.\n\nType: behavioral\nCategory: Decision Making\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:21:58.127130",
+    "source": "interview_question",
+    "question_id": "iq_df06cb16",
+    "type": "behavioral",
+    "category": "Decision Making",
+    "tags": []
+  },
+  {
+    "id": "doc_100_1762482118.766598",
+    "text": "Interview Question: Tell me about a decision that you regret.\n\nAnswer: Hiring: Not hiring the best people, rush to hire.\n\nType: behavioral\nCategory: Decision Making\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:21:58.467087",
+    "source": "interview_question",
+    "question_id": "iq_909f39ce",
+    "type": "behavioral",
+    "category": "Decision Making",
+    "tags": []
+  },
+  {
+    "id": "doc_101_1762482119.155208",
+    "text": "Interview Question: How do you motivate employees?\n\nAnswer: That is a very good question. It is even more important given we are still working in the hybrid env. I try my best to make employees feel valued, engaged, and inspired. Recognize and Reward Efforts: celebrate small wins, small things like Publicly acknowledge achievements (shoutouts in meetings, or company-wide emails goes a long way of keeping people engaged), a Slack message also means a lot to the employees. Offer Growth Opportunities: identifying high growth individuals and spend time in coaching and mentorships, sending for conferences etc. For example, there is one young graduate who is showing a lot of potential. I used a lot of time one-on-one in coaching him on how to handle more complex projects and how to plan and execute projects. also encourage employees to take on new challenges or projects outside their comfort zones. Foster a Positive Work Culture: I built an environment where team members can communicate openly and freely ( and address any conflicts promptly and fairly.) There is a team lead which tends to make some team members uncomfortable by questioning team members on timelines in a not very friendly manner. I talked with him on the sideline and made sure he understood that his job is to lead technically and let the manager do the people and project management side of things. Avoid micromanagement—trust them to complete tasks in their own way. Give flexibility in work schedules (remote work options, flexible hours). Some of the team members are also studying part time. I encouraged them to continue their study also sometime it does make it difficult to manage projects. Create a Fun and Engaging Workplace: Organize team-building activities and social events.\n\nType: behavioral\nCategory: Leadership\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:21:58.788368",
+    "source": "interview_question",
+    "question_id": "iq_54fc9f50",
+    "type": "behavioral",
+    "category": "Leadership",
+    "tags": []
+  },
+  {
+    "id": "doc_102_1762482119.477218",
+    "text": "Interview Question: How do you delegate (team work)?\n\nAnswer: What to delegate? who to delegate? How (give clear instructions) what (don’t micro-manage) Check point Repeat\n\nType: behavioral\nCategory: Delegation\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:21:59.177536",
+    "source": "interview_question",
+    "question_id": "iq_d0de0f29",
+    "type": "behavioral",
+    "category": "Delegation",
+    "tags": []
+  },
+  {
+    "id": "doc_103_1762482119.839789",
+    "text": "Interview Question: What did you do when you needed to motivate a group of individuals?\n\nAnswer: Team building. Celebrate small achievements. Focus. Lead by example. Communicate the importance and objectives of the project. Align each person’s interests with the project’s outcome. Check in regularly to make sure the interests are still aligned and there is no burn-out. Offer opportunities for self-development. Foster collaboration within the team.\n\nType: behavioral\nCategory: Motivation\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:21:59.498725",
+    "source": "interview_question",
+    "question_id": "iq_5e68abee",
+    "type": "behavioral",
+    "category": "Motivation",
+    "tags": []
+  },
+  {
+    "id": "doc_104_1762482120.163975",
+    "text": "Interview Question: Tell me about a time you stepped up into a leadership role\n\nAnswer: \n\nType: behavioral\nCategory: Leadership\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:21:59.859662",
+    "source": "interview_question",
+    "question_id": "iq_2c6b33c1",
+    "type": "behavioral",
+    "category": "Leadership",
+    "tags": []
+  },
+  {
+    "id": "doc_105_1762482120.479053",
+    "text": "Interview Question: Do you collaborate well?\n\nAnswer: \n\nType: behavioral\nCategory: Teamwork\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:00.181752",
+    "source": "interview_question",
+    "question_id": "iq_92efd4f9",
+    "type": "behavioral",
+    "category": "Teamwork",
+    "tags": []
+  },
+  {
+    "id": "doc_106_1762482120.819356",
+    "text": "Interview Question: Describe a situation when you negotiated with others in your organization to reach an agreement.\n\nAnswer: File Signing Project:\n\nType: behavioral\nCategory: Negotiation\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:00.500064",
+    "source": "interview_question",
+    "question_id": "iq_3901383e",
+    "type": "behavioral",
+    "category": "Negotiation",
+    "tags": []
+  },
+  {
+    "id": "doc_107_1762482121.136262",
+    "text": "Interview Question: We've all had to work with people that don't like us. How do you deal with someone that doesn't like you?\n\nAnswer: Focus on the tasks, not the person. Be proactive in communications. Provide enough background information and lead time.\n\nType: behavioral\nCategory: Interpersonal Skills\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:00.842415",
+    "source": "interview_question",
+    "question_id": "iq_d50ee6dc",
+    "type": "behavioral",
+    "category": "Interpersonal Skills",
+    "tags": []
+  },
+  {
+    "id": "doc_108_1762482121.479619",
+    "text": "Interview Question: We all make mistakes we wish we could take back. Tell me about a time you wish you’d handled a situation differently with a colleague.\n\nAnswer: Wrote a not very polite email on the issues. There is one team member who didn't show up for one of the important meetings and didn’t answer the phone. I immediately wrote a harsh email questioning why he didn’t show up. Later I learned that he actually ran into an accident and was in hospital at the time. I felt so bad and apologized afterwards.\n\nType: behavioral\nCategory: Conflict Resolution\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:01.160681",
+    "source": "interview_question",
+    "question_id": "iq_a4fd18df",
+    "type": "behavioral",
+    "category": "Conflict Resolution",
+    "tags": []
+  },
+  {
+    "id": "doc_109_1762482121.824716",
+    "text": "Interview Question: The last time you had to apologize to someone\n\nAnswer: Wrote a not very polite email on the issues. There is one team member who didn't show up for one of the important meetings and didn’t answer the phone. I immediately wrote a harsh email questioning why he didn’t show up. Later I learned that he actually ran into an accident and was in hospital at the time. I felt so bad and apologized afterwards.\n\nType: behavioral\nCategory: Conflict Resolution\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:01.503574",
+    "source": "interview_question",
+    "question_id": "iq_3991d817",
+    "type": "behavioral",
+    "category": "Conflict Resolution",
+    "tags": []
+  },
+  {
+    "id": "doc_110_1762482122.187384",
+    "text": "Interview Question: Give me an example of a time you faced a conflict while working on a team. How did you handle that?\n\nAnswer: Too many meetings vs Not enough meetings? Design decision: one file or two files. Work allocation: should team leaders work on small bugs? Job allocation: senior vs junior assignment\n\nType: behavioral\nCategory: Conflict Resolution\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:01.846679",
+    "source": "interview_question",
+    "question_id": "iq_6def33f3",
+    "type": "behavioral",
+    "category": "Conflict Resolution",
+    "tags": []
+  },
+  {
+    "id": "doc_111_1762482122.509632",
+    "text": "Interview Question: Tell me about a time when you received negative feedback from your manager. How did you respond?\n\nAnswer: Focus on working on one project too much. Assigning tasks to senior members too often.\n\nType: behavioral\nCategory: Feedback\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:02.205212",
+    "source": "interview_question",
+    "question_id": "iq_1486e4f6",
+    "type": "behavioral",
+    "category": "Feedback",
+    "tags": []
+  },
+  {
+    "id": "doc_112_1762482122.820507",
+    "text": "Interview Question: How to influence others\n\nAnswer: isn’t about authority—it’s about building trust, credibility, and relationships. 1. Build Strong Relationships: Be approachable and engage with colleagues genuinely. Take an interest in others’ perspectives and needs. Support and collaborate with coworkers before asking for their support. 2. Lead by Example: Show professionalism, integrity, and a strong work ethic. Stay calm and solution-oriented in challenging situations. 3. Develop Expertise and Credibility: Be knowledgeable and stay updated in your field. Deliver high-quality work consistently so people trust your judgment. 4. Be a Good Listener: Show empathy and consider different viewpoints. Make people feel heard and valued to strengthen your influence. 5. Follow Through on Commitments: Keep your promises and be reliable. Build trust by consistently delivering results.\n\nType: behavioral\nCategory: Influence\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:02.532621",
+    "source": "interview_question",
+    "question_id": "iq_2c4c4466",
+    "type": "behavioral",
+    "category": "Influence",
+    "tags": []
+  },
+  {
+    "id": "doc_113_1762482123.135005",
+    "text": "Interview Question: Tell me about a time when you came up with a new approach to a problem.\n\nAnswer: FT stabilization\n\nType: behavioral\nCategory: Problem Solving\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:02.833552",
+    "source": "interview_question",
+    "question_id": "iq_ed6b1989",
+    "type": "behavioral",
+    "category": "Problem Solving",
+    "tags": []
+  },
+  {
+    "id": "doc_114_1762482123.462244",
+    "text": "Interview Question: Describe a time when you anticipated potential problems and developed preventive measures.\n\nAnswer: On-Prem project\n\nType: behavioral\nCategory: Risk Management\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:03.156221",
+    "source": "interview_question",
+    "question_id": "iq_3024dfa9",
+    "type": "behavioral",
+    "category": "Risk Management",
+    "tags": []
+  },
+  {
+    "id": "doc_115_1762482123.772355",
+    "text": "Interview Question: Describe a situation in which you found a creative way to overcome an obstacle.\n\nAnswer: FT stabilization\n\nType: behavioral\nCategory: Problem Solving\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:03.486351",
+    "source": "interview_question",
+    "question_id": "iq_c7d46f74",
+    "type": "behavioral",
+    "category": "Problem Solving",
+    "tags": []
+  },
+  {
+    "id": "doc_116_1762482124.089764",
+    "text": "Interview Question: How have you leveraged data to develop a strategy?\n\nAnswer: Google Analytics\n\nType: behavioral\nCategory: Data Analysis\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:03.796517",
+    "source": "interview_question",
+    "question_id": "iq_3a305568",
+    "type": "behavioral",
+    "category": "Data Analysis",
+    "tags": []
+  },
+  {
+    "id": "doc_117_1762482124.40434",
+    "text": "Interview Question: a time when you were 75% through a project, & you had to pivot strategy\n\nAnswer: \n\nType: behavioral\nCategory: Strategy\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:04.112496",
+    "source": "interview_question",
+    "question_id": "iq_9984c8a8",
+    "type": "behavioral",
+    "category": "Strategy",
+    "tags": []
+  },
+  {
+    "id": "doc_118_1762482124.713376",
+    "text": "Interview Question: Tell me about a time when you had to choose between technologies for a project\n\nAnswer: Go vs Java\n\nType: technical\nCategory: Technology Selection\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:04.427492",
+    "source": "interview_question",
+    "question_id": "iq_fe414711",
+    "type": "technical",
+    "category": "Technology Selection",
+    "tags": []
+  },
+  {
+    "id": "doc_119_1762482125.035479",
+    "text": "Interview Question: Tell me about a time you had to deal with ambiguity\n\nAnswer: Lambda\n\nType: behavioral\nCategory: Ambiguity\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:04.738651",
+    "source": "interview_question",
+    "question_id": "iq_0c8188f4",
+    "type": "behavioral",
+    "category": "Ambiguity",
+    "tags": []
+  },
+  {
+    "id": "doc_120_1762482125.348397",
+    "text": "Interview Question: What’s the most innovative new idea that you have implemented?\n\nAnswer: Lambda@Edge\n\nType: behavioral\nCategory: Innovation\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:05.057675",
+    "source": "interview_question",
+    "question_id": "iq_1f77d6a9",
+    "type": "behavioral",
+    "category": "Innovation",
+    "tags": []
+  },
+  {
+    "id": "doc_121_1762482125.663869",
+    "text": "Interview Question: Describe a time when you sacrificed short term goals for long term success\n\nAnswer: \n\nType: behavioral\nCategory: Strategy\nCompanies: \nTags:",
+    "timestamp": "2025-11-06T18:22:05.373872",
+    "source": "interview_question",
+    "question_id": "iq_3eeeb776",
+    "type": "behavioral",
+    "category": "Strategy",
+    "tags": []
   }
 ]

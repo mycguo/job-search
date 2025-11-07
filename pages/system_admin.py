@@ -1,6 +1,6 @@
 import streamlit as st
 from app import download_faiss_from_s3, download_s3_bucket   
-from pages.app_admin import upload_vector_store_to_s3
+from pages.upload_docs import upload_vector_store_to_s3
 
 
 bucket_name = st.secrets["BUCKET_NAME"]

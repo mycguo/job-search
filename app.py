@@ -7,7 +7,7 @@ import google.generativeai as genai
 from simple_vector_store import SimpleVectorStore as MilvusVectorStore
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
-from pages.app_admin import get_vector_store, get_text_chunks
+from pages.upload_docs import get_vector_store, get_text_chunks
 from langchain.chains.combine_documents import create_stuff_documents_chain
 import boto3
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
@@ -533,45 +533,8 @@ def main():
         db = None
         has_job_db = False
 
-    # Sidebar for navigation and quick actions
+    # Sidebar for quick actions
     with st.sidebar:
-        st.header("🧭 Navigation")
-
-        if st.button("📊 Dashboard", use_container_width=True):
-            st.switch_page("pages/dashboard.py")
-
-        if st.button("📝 Manage Applications", use_container_width=True):
-            st.switch_page("pages/applications.py")
-
-        if st.button("📚 Knowledge Base", use_container_width=True):
-            st.switch_page("pages/app_admin.py")
-
-        if st.button("🎯 Interview Prep", use_container_width=True):
-            st.switch_page("pages/interview_prep.py")
-
-        if st.button("📄 Resume Manager", use_container_width=True):
-            st.switch_page("pages/resume.py")
-
-        st.divider()
-
-        # Quick stats
-        if has_job_db and db:
-            st.header("📊 Quick Stats")
-            try:
-                stats = db.get_stats()
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("Applications", stats['total'])
-                with col2:
-                    st.metric("Active", stats['active'])
-
-                if stats['total'] > 0:
-                    st.metric("Response Rate", f"{stats['response_rate']}%")
-            except Exception as e:
-                st.caption("No applications yet")
-
-        st.divider()
-
         # Quick save section
         st.header("💾 Quick Save")
         st.markdown("Save information without uploading documents")
@@ -606,6 +569,24 @@ def main():
 
         st.divider()
         st.caption("💡 **Tip**: Type 'Remember that...' or 'Applied to...' in chat")
+
+        st.divider()
+
+        # Quick stats
+        if has_job_db and db:
+            st.header("📊 Quick Stats")
+            try:
+                stats = db.get_stats()
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Applications", stats['total'])
+                with col2:
+                    st.metric("Active", stats['active'])
+
+                if stats['total'] > 0:
+                    st.metric("Response Rate", f"{stats['response_rate']}%")
+            except Exception as e:
+                st.caption("No applications yet")
 
     # fix the empty vector store issue
     get_vector_store(get_text_chunks("Loading your knowledge base for job search insights"))

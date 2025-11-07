@@ -11,6 +11,7 @@ Main hub for managing interview prep materials:
 import streamlit as st
 import sys
 from datetime import datetime
+import random
 
 # Add parent directory to path
 sys.path.insert(0, '.')
@@ -19,10 +20,12 @@ from storage.interview_db import InterviewDB
 from models.interview_prep import (
     create_interview_question,
     create_technical_concept,
-    create_company_research
+    create_company_research,
+    create_practice_session,
+    PracticeSession
 )
 from simple_vector_store import SimpleVectorStore
-from pages.app_admin import get_text_chunks
+from pages.upload_docs import get_text_chunks
 import io
 from langchain_google_genai import ChatGoogleGenerativeAI
 import json
@@ -548,6 +551,463 @@ def show_add_question_form(db: InterviewDB):
                     st.error(f"Error: {str(e)}")
 
 
+def show_practice_mode(db: InterviewDB):
+    """Practice Mode - Interactive question practice session"""
+    st.subheader("🎓 Practice Mode")
+    st.markdown("Practice your interview questions with timer and self-evaluation")
+
+    # Initialize practice session state
+    if 'practice_session' not in st.session_state:
+        st.session_state['practice_session'] = None
+        st.session_state['current_question_index'] = 0
+        st.session_state['practice_questions'] = []
+        st.session_state['start_time'] = None
+        st.session_state['show_answer'] = False
+
+    # Get all questions
+    all_questions = db.list_questions()
+
+    if not all_questions:
+        st.warning("No questions available. Add some questions first!")
+        return
+
+    # Practice session configuration
+    if st.session_state['practice_session'] is None:
+        st.markdown("### Configure Practice Session")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            # Filter options
+            filter_type = st.selectbox(
+                "Question Type",
+                ["All", "behavioral", "technical", "system-design", "case-study"],
+                help="Filter questions by type"
+            )
+
+            filter_difficulty = st.selectbox(
+                "Difficulty",
+                ["All", "easy", "medium", "hard"],
+                help="Filter questions by difficulty"
+            )
+
+        with col2:
+            num_questions = st.slider(
+                "Number of Questions",
+                min_value=1,
+                max_value=min(20, len(all_questions)),
+                value=min(5, len(all_questions)),
+                help="How many questions to practice"
+            )
+
+            practice_mode = st.radio(
+                "Practice Mode",
+                ["Random", "Least Practiced", "Low Confidence"],
+                help="How to select questions"
+            )
+
+        if st.button("🎯 Start Practice Session", type="primary", use_container_width=True):
+            # Filter questions
+            filtered_questions = all_questions
+
+            if filter_type != "All":
+                filtered_questions = [q for q in filtered_questions if q.type == filter_type]
+
+            if filter_difficulty != "All":
+                filtered_questions = [q for q in filtered_questions if q.difficulty == filter_difficulty]
+
+            if not filtered_questions:
+                st.error("No questions match your filters!")
+                return
+
+            # Select questions based on mode
+            if practice_mode == "Random":
+                selected = random.sample(filtered_questions, min(num_questions, len(filtered_questions)))
+            elif practice_mode == "Least Practiced":
+                sorted_q = sorted(filtered_questions, key=lambda x: x.practice_count)
+                selected = sorted_q[:num_questions]
+            else:  # Low Confidence
+                sorted_q = sorted(filtered_questions, key=lambda x: x.confidence_level)
+                selected = sorted_q[:num_questions]
+
+            # Create practice session
+            session = create_practice_session(
+                session_type=filter_type if filter_type != "All" else "general",
+                duration_minutes=0
+            )
+
+            st.session_state['practice_session'] = session
+            st.session_state['practice_questions'] = selected
+            st.session_state['current_question_index'] = 0
+            st.session_state['start_time'] = datetime.now()
+            st.session_state['show_answer'] = False
+            st.rerun()
+
+    else:
+        # Active practice session
+        session = st.session_state['practice_session']
+        questions = st.session_state['practice_questions']
+        current_index = st.session_state['current_question_index']
+
+        if current_index >= len(questions):
+            # Session complete
+            st.success("🎉 Practice Session Complete!")
+
+            elapsed = (datetime.now() - st.session_state['start_time']).seconds // 60
+            session.duration_minutes = elapsed
+
+            # Save session
+            db.add_practice_session(session)
+
+            st.markdown(f"### Session Summary")
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric("Questions Practiced", len(questions))
+            with col2:
+                st.metric("Duration", f"{elapsed} min")
+            with col3:
+                avg_rating = session.get_average_rating()
+                st.metric("Avg Performance", f"{avg_rating:.1f}/5")
+
+            if st.button("✨ Start New Session"):
+                st.session_state['practice_session'] = None
+                st.session_state['current_question_index'] = 0
+                st.session_state['practice_questions'] = []
+                st.session_state['start_time'] = None
+                st.session_state['show_answer'] = False
+                st.rerun()
+
+            return
+
+        # Show current question
+        current_q = questions[current_index]
+
+        st.progress((current_index + 1) / len(questions))
+        st.caption(f"Question {current_index + 1} of {len(questions)}")
+
+        st.markdown("---")
+
+        # Question details
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.write(f"**Type:** {current_q.get_display_type()}")
+        with col2:
+            st.write(f"**Difficulty:** {current_q.get_difficulty_emoji()} {current_q.difficulty.title()}")
+        with col3:
+            st.write(f"**Category:** {current_q.category.title()}")
+
+        st.markdown("### Question")
+        st.markdown(f"**{current_q.question}**")
+
+        # Timer
+        elapsed_seconds = (datetime.now() - st.session_state['start_time']).seconds
+        elapsed_minutes = elapsed_seconds // 60
+        elapsed_secs = elapsed_seconds % 60
+        st.caption(f"⏱️ Session Time: {elapsed_minutes:02d}:{elapsed_secs:02d}")
+
+        st.markdown("---")
+
+        # Show/Hide answer
+        col1, col2 = st.columns([1, 3])
+
+        with col1:
+            if st.button("👁️ Show Answer" if not st.session_state['show_answer'] else "🙈 Hide Answer",
+                        use_container_width=True):
+                st.session_state['show_answer'] = not st.session_state['show_answer']
+                st.rerun()
+
+        if st.session_state['show_answer']:
+            st.markdown("### Answer")
+            st.markdown(current_q.answer_full)
+
+            if current_q.answer_star:
+                with st.expander("📋 STAR Format"):
+                    if 'situation' in current_q.answer_star:
+                        st.markdown(f"**Situation:** {current_q.answer_star['situation']}")
+                    if 'task' in current_q.answer_star:
+                        st.markdown(f"**Task:** {current_q.answer_star['task']}")
+                    if 'action' in current_q.answer_star:
+                        st.markdown(f"**Action:** {current_q.answer_star['action']}")
+                    if 'result' in current_q.answer_star:
+                        st.markdown(f"**Result:** {current_q.answer_star['result']}")
+
+            if current_q.notes:
+                with st.expander("📝 Notes"):
+                    st.markdown(current_q.notes)
+
+            st.markdown("---")
+
+            # Self-evaluation
+            st.markdown("### Self-Evaluation")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                performance_rating = st.slider(
+                    "How well did you answer?",
+                    min_value=1,
+                    max_value=5,
+                    value=3,
+                    help="1 = Poor, 5 = Excellent"
+                )
+
+            with col2:
+                new_confidence = st.slider(
+                    "Confidence Level",
+                    min_value=1,
+                    max_value=5,
+                    value=current_q.confidence_level,
+                    help="Update your confidence for this question"
+                )
+
+            performance_notes = st.text_area(
+                "Notes (optional)",
+                placeholder="What went well? What needs improvement?",
+                height=100
+            )
+
+            if st.button("➡️ Next Question", type="primary", use_container_width=True):
+                # Record performance
+                session.add_question(current_q.id, performance_rating, performance_notes)
+
+                # Update question
+                current_q.mark_practiced()
+                current_q.update_confidence(new_confidence)
+                db.update_question(current_q)
+
+                # Move to next
+                st.session_state['current_question_index'] += 1
+                st.session_state['show_answer'] = False
+                st.rerun()
+
+
+def show_question_detail(db: InterviewDB, question_id: str):
+    """Show detailed view of a single question"""
+    question = db.get_question(question_id)
+
+    if not question:
+        st.error("Question not found!")
+        return
+
+    # Header with back button
+    col1, col2 = st.columns([4, 1])
+
+    with col1:
+        st.title(f"{question.get_display_type()} Question")
+
+    with col2:
+        if st.button("← Back to List"):
+            del st.session_state['view_question_id']
+            st.rerun()
+
+    st.divider()
+
+    # Metadata row
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("Difficulty", f"{question.get_difficulty_emoji()} {question.difficulty.title()}")
+
+    with col2:
+        st.metric("Confidence", f"{question.get_confidence_emoji()} {question.confidence_level}/5")
+
+    with col3:
+        st.metric("Practice Count", question.practice_count)
+
+    with col4:
+        if question.last_practiced:
+            last_practiced = question.last_practiced[:10]
+            st.metric("Last Practiced", last_practiced)
+        else:
+            st.metric("Last Practiced", "Never")
+
+    st.divider()
+
+    # Question details tabs
+    tab1, tab2, tab3 = st.tabs(["📝 Question & Answer", "ℹ️ Details", "⚙️ Actions"])
+
+    with tab1:
+        st.subheader("Question")
+        st.markdown(f"**{question.question}**")
+
+        st.markdown("---")
+
+        st.subheader("Answer")
+        st.markdown(question.answer_full)
+
+        if question.answer_star:
+            st.markdown("---")
+            st.subheader("📋 STAR Format")
+
+            if 'situation' in question.answer_star:
+                st.markdown(f"**Situation:** {question.answer_star['situation']}")
+            if 'task' in question.answer_star:
+                st.markdown(f"**Task:** {question.answer_star['task']}")
+            if 'action' in question.answer_star:
+                st.markdown(f"**Action:** {question.answer_star['action']}")
+            if 'result' in question.answer_star:
+                st.markdown(f"**Result:** {question.answer_star['result']}")
+
+        if question.notes:
+            st.markdown("---")
+            st.subheader("📝 Notes")
+            st.markdown(question.notes)
+
+    with tab2:
+        st.subheader("Question Information")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.write("**Type:**", question.get_display_type())
+            st.write("**Category:**", question.category.title())
+            st.write("**Difficulty:**", f"{question.get_difficulty_emoji()} {question.difficulty.title()}")
+
+        with col2:
+            st.write("**Confidence Level:**", f"{question.get_confidence_emoji()} {question.confidence_level}/5")
+            st.write("**Practice Count:**", question.practice_count)
+            if question.last_practiced:
+                st.write("**Last Practiced:**", question.last_practiced[:10])
+
+        if question.tags:
+            st.write("**Tags:**", ", ".join(question.tags))
+
+        if question.companies:
+            st.write("**Companies:**", ", ".join(question.companies))
+
+        st.divider()
+
+        st.write("**Created:**", question.created_at[:10])
+        st.write("**Updated:**", question.updated_at[:10])
+
+    with tab3:
+        st.subheader("Question Actions")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### Update Confidence")
+            new_confidence = st.slider(
+                "Confidence Level",
+                min_value=1,
+                max_value=5,
+                value=question.confidence_level,
+                help="How confident are you with this answer?"
+            )
+
+            if st.button("💾 Update Confidence", use_container_width=True):
+                question.update_confidence(new_confidence)
+                db.update_question(question)
+                st.success("✅ Confidence updated!")
+                st.rerun()
+
+        with col2:
+            st.markdown("### Mark as Practiced")
+            st.write(f"Current practice count: {question.practice_count}")
+
+            if st.button("✅ Mark as Practiced", use_container_width=True):
+                question.mark_practiced()
+                db.update_question(question)
+                st.success("✅ Marked as practiced!")
+                st.rerun()
+
+        st.divider()
+
+        # Update Answer Section
+        st.markdown("### ✏️ Update Answer")
+
+        with st.expander("Edit Answer", expanded=False):
+            new_answer = st.text_area(
+                "Answer",
+                value=question.answer_full,
+                height=200,
+                help="Update your answer to this question"
+            )
+
+            # Optional: Update STAR format
+            st.markdown("**STAR Format (Optional)**")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                star_situation = st.text_area(
+                    "Situation",
+                    value=question.answer_star.get('situation', '') if question.answer_star else '',
+                    height=80,
+                    key=f"star_situation_{question.id}"
+                )
+
+                star_task = st.text_area(
+                    "Task",
+                    value=question.answer_star.get('task', '') if question.answer_star else '',
+                    height=80,
+                    key=f"star_task_{question.id}"
+                )
+
+            with col2:
+                star_action = st.text_area(
+                    "Action",
+                    value=question.answer_star.get('action', '') if question.answer_star else '',
+                    height=80,
+                    key=f"star_action_{question.id}"
+                )
+
+                star_result = st.text_area(
+                    "Result",
+                    value=question.answer_star.get('result', '') if question.answer_star else '',
+                    height=80,
+                    key=f"star_result_{question.id}"
+                )
+
+            notes_update = st.text_area(
+                "Notes",
+                value=question.notes,
+                height=100,
+                help="Additional notes about this question"
+            )
+
+            if st.button("💾 Update Answer", type="primary", use_container_width=True):
+                # Update answer
+                question.answer_full = new_answer
+
+                # Update STAR format if any field is filled
+                if star_situation or star_task or star_action or star_result:
+                    question.answer_star = {
+                        'situation': star_situation,
+                        'task': star_task,
+                        'action': star_action,
+                        'result': star_result
+                    }
+
+                # Update notes
+                question.notes = notes_update
+
+                # Update timestamp
+                question.updated_at = datetime.now().isoformat()
+
+                # Save to database
+                db.update_question(question)
+                st.success("✅ Answer updated successfully!")
+                st.rerun()
+
+        st.divider()
+
+        # Danger zone
+        with st.expander("🗑️ Danger Zone"):
+            st.warning("This action cannot be undone!")
+
+            if st.button("Delete Question", type="secondary"):
+                if st.session_state.get('confirm_delete_question'):
+                    db.delete_question(question_id)
+                    del st.session_state['view_question_id']
+                    st.success("Question deleted!")
+                    st.rerun()
+                else:
+                    st.session_state['confirm_delete_question'] = True
+                    st.warning("Click again to confirm deletion")
+
+
 def show_recent_questions(db: InterviewDB, limit: int = 10):
     """Show recently added questions"""
     questions = db.list_questions()
@@ -596,13 +1056,18 @@ def main():
     # Initialize database
     db = InterviewDB()
 
+    # Check if viewing a specific question
+    if st.session_state.get('view_question_id'):
+        show_question_detail(db, st.session_state['view_question_id'])
+        return
+
     # Get stats
     stats = db.get_stats()
 
     # Key Metrics Row
     st.header("📊 Your Prep Stats")
 
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         st.metric(
@@ -620,19 +1085,12 @@ def main():
 
     with col3:
         st.metric(
-            "Concepts",
-            stats['total_concepts'],
-            help="Technical concepts stored"
-        )
-
-    with col4:
-        st.metric(
             "Companies",
             stats['total_companies'],
             help="Company research entries"
         )
 
-    with col5:
+    with col4:
         st.metric(
             "Practice Hours",
             f"{stats['total_practice_time_hours']:.1f}",
@@ -644,7 +1102,7 @@ def main():
     # Quick Actions
     st.header("⚡ Quick Actions")
 
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         if st.button("📄 Upload Document", use_container_width=True):
@@ -662,14 +1120,10 @@ def main():
             st.info("Questions page coming soon!")
 
     with col4:
-        if st.button("💻 Technical Concepts", use_container_width=True):
-            # TODO: Navigate to concepts page
-            st.info("Concepts page coming soon!")
-
-    with col5:
         if st.button("🎓 Practice Mode", use_container_width=True):
-            # TODO: Navigate to practice page
-            st.info("Practice mode coming soon!")
+            st.session_state['show_practice_mode'] = True
+            st.session_state['show_add_question'] = False
+            st.session_state['show_upload_document'] = False
 
     st.divider()
 
@@ -696,6 +1150,21 @@ def main():
     # Show parsed questions review if available
     if 'parsed_questions' in st.session_state:
         show_parsed_questions_review(db)
+        st.divider()
+
+    # Show practice mode if requested
+    if st.session_state.get('show_practice_mode', False):
+        show_practice_mode(db)
+
+        if st.button("✕ Close Practice Mode"):
+            st.session_state['show_practice_mode'] = False
+            st.session_state['practice_session'] = None
+            st.session_state['current_question_index'] = 0
+            st.session_state['practice_questions'] = []
+            st.session_state['start_time'] = None
+            st.session_state['show_answer'] = False
+            st.rerun()
+
         st.divider()
 
     # Breakdown by type
