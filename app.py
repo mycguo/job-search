@@ -606,20 +606,23 @@ def main():
     st.markdown("Ask questions, track applications, or save information naturally")
 
     # Quick action buttons
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
     with col1:
         if st.button("📊 Dashboard", use_container_width=True):
             st.switch_page("pages/dashboard.py")
     with col2:
+        if st.button("📅 Interviews", use_container_width=True):
+            st.switch_page("pages/interview_schedule.py")
+    with col3:
         if st.button("🎯 Interview Prep", use_container_width=True):
             st.switch_page("pages/interview_prep.py")
-    with col3:
+    with col4:
         if st.button("📄 Resume", use_container_width=True):
             st.switch_page("pages/resume.py")
-    with col4:
+    with col5:
         if st.button("➕ Add Application", use_container_width=True):
             st.switch_page("pages/applications.py")
-    with col5:
+    with col6:
         if st.button("📋 View All Apps", use_container_width=True):
             st.switch_page("pages/applications.py")
 

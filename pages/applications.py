@@ -378,10 +378,15 @@ def show_application_detail(db: JobSearchDB, app_id: str):
             event_notes = st.text_area("Notes", placeholder="Add details about this event...")
 
             if st.form_submit_button("Add Event"):
-                if event_notes:
-                    db.add_application_note(app.id, f"[{event_type.upper()}] {event_notes}")
-                    st.success("Event added!")
+                # Add timeline event with the specified date
+                event_date_str = event_date.strftime("%Y-%m-%d")
+                success = db.add_timeline_event(app.id, event_type, event_date_str, event_notes)
+                
+                if success:
+                    st.success("✅ Event added to timeline!")
                     st.rerun()
+                else:
+                    st.error("❌ Failed to add event. Please try again.")
 
     with tab4:
         # Edit form - shown directly
