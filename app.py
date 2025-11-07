@@ -668,15 +668,8 @@ def main():
         """)
 
     st.markdown("<div style='height:200px;'></div>", unsafe_allow_html=True)
-    st.markdown("""
-        ---
-        **Tech Stack:** Streamlit • Gemini 2.5 Flash • Google Embeddings • RAG • LangChain
-    """)
-    
-    # Logout button in sidebar
-    with st.sidebar:
-        st.divider()
-        st.button("Log out", on_click=st.logout)
+    st.markdown("---")
+    st.button("Log out", on_click=st.logout, use_container_width=True)
 
 if __name__ == "__main__":
     main()
