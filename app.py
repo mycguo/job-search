@@ -10,13 +10,10 @@ from langchain.prompts import PromptTemplate
 from pages.upload_docs import get_vector_store, get_text_chunks
 from langchain.chains.combine_documents import create_stuff_documents_chain
 import boto3
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
 
 genai.configure(api_key=os.getenv("GENAI_API_KEY"))
 os.environ["USER_AGENT"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-
-nvidia_api_key = st.secrets["NVIDIA_API_KEY"]
 
 def get_prompt_template():
     return PromptTemplate()
