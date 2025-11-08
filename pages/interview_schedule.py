@@ -245,7 +245,9 @@ def main():
         
         st.subheader(f"📅 {category}")
         
-        for interview in grouped_interviews[category]:
+        for idx, interview in enumerate(grouped_interviews[category]):
+            interview_key = f"{interview['application_id']}_{interview['date']}_{idx}"
+            
             with st.container():
                 col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
                 
@@ -266,13 +268,106 @@ def main():
                         st.caption(f"👤 {interview['interviewer']}")
                 
                 with col4:
-                    if st.button("View Application", key=f"view_{interview['application_id']}_{interview['date']}"):
+                    if st.button("View App", key=f"view_{interview_key}", use_container_width=True):
                         st.session_state['view_application_id'] = interview['application_id']
                         st.switch_page("pages/applications.py")
                 
-                if interview.get('notes'):
-                    with st.expander("📝 Notes"):
-                        st.write(interview['notes'])
+                # Edit/Delete actions
+                with st.expander("✏️ Edit Interview"):
+                    # Get the event index in the application's timeline
+                    app = db.get_application(interview['application_id'])
+                    if app:
+                        # Find the event in the timeline
+                        event_index = None
+                        for i, event in enumerate(app.timeline):
+                            if event.date == interview['date'] and event.event_type == interview['event'].event_type:
+                                event_index = i
+                                break
+                        
+                        if event_index is not None:
+                            col_edit1, col_edit2, col_edit3 = st.columns(3)
+                            
+                            with col_edit1:
+                                new_event_type = st.selectbox(
+                                    "Type",
+                                    ["interview", "screening", "technical", "behavioral", "onsite", "phone", "video"],
+                                    index=["interview", "screening", "technical", "behavioral", "onsite", "phone", "video"].index(interview['event'].event_type) if interview['event'].event_type in ["interview", "screening", "technical", "behavioral", "onsite", "phone", "video"] else 0,
+                                    key=f"type_{interview_key}"
+                                )
+                            
+                            with col_edit2:
+                                new_event_date = st.date_input(
+                                    "Date",
+                                    value=datetime.strptime(interview['date'], "%Y-%m-%d"),
+                                    key=f"date_{interview_key}"
+                                )
+                            
+                            with col_edit3:
+                                # Extract current time if available
+                                current_time = None
+                                if interview.get('time'):
+                                    try:
+                                        if 'AM' in interview['time'].upper() or 'PM' in interview['time'].upper():
+                                            current_time = datetime.strptime(interview['time'], "%I:%M %p").time()
+                                        else:
+                                            current_time = datetime.strptime(interview['time'], "%H:%M").time()
+                                    except:
+                                        current_time = datetime.now().time()
+                                else:
+                                    current_time = datetime.now().time()
+                                
+                                new_event_time = st.time_input(
+                                    "Time",
+                                    value=current_time,
+                                    key=f"time_{interview_key}"
+                                )
+                            
+                            new_notes = st.text_area(
+                                "Notes",
+                                value=interview.get('notes', ''),
+                                height=100,
+                                key=f"notes_{interview_key}"
+                            )
+                            
+                            col_btn1, col_btn2 = st.columns(2)
+                            
+                            with col_btn1:
+                                if st.button("💾 Save Changes", key=f"save_{interview_key}", use_container_width=True):
+                                    # Format time and include in notes
+                                    time_str = new_event_time.strftime("%I:%M %p")
+                                    updated_notes = new_notes
+                                    if not updated_notes.startswith("Time:"):
+                                        updated_notes = f"Time: {time_str}\n{updated_notes}" if updated_notes else f"Time: {time_str}"
+                                    else:
+                                        # Replace existing time
+                                        updated_notes = re.sub(r'^Time:.*?\n', f'Time: {time_str}\n', updated_notes)
+                                    
+                                    success = db.update_timeline_event(
+                                        interview['application_id'],
+                                        event_index,
+                                        event_type=new_event_type,
+                                        event_date=new_event_date.strftime("%Y-%m-%d"),
+                                        notes=updated_notes
+                                    )
+                                    
+                                    if success:
+                                        st.success("✅ Interview updated!")
+                                        st.rerun()
+                                    else:
+                                        st.error("❌ Failed to update interview")
+                            
+                            with col_btn2:
+                                if st.button("🗑️ Delete", key=f"delete_{interview_key}", use_container_width=True):
+                                    if st.session_state.get(f'confirm_delete_{interview_key}'):
+                                        success = db.delete_timeline_event(interview['application_id'], event_index)
+                                        if success:
+                                            st.success("✅ Interview deleted!")
+                                            st.rerun()
+                                        else:
+                                            st.error("❌ Failed to delete interview")
+                                    else:
+                                        st.session_state[f'confirm_delete_{interview_key}'] = True
+                                        st.warning("Click again to confirm deletion")
                 
                 st.divider()
     
