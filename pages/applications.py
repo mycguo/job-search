@@ -14,6 +14,10 @@ from typing import Optional
 sys.path.insert(0, '.')
 
 from models.application import Application, ContactLink, create_application
+from storage.json_db import JobSearchDB
+from ai.job_matcher import JobMatcher, get_default_user_profile
+from storage.auth_utils import is_user_logged_in, login, logout
+from pages.resume import fetch_job_description_from_url
 
 
 def build_contact_link(name: str, url: str, email: str = None) -> Optional[ContactLink]:
@@ -53,10 +57,6 @@ def render_contact(label: str, contact: Optional[ContactLink]):
         st.write(f"**{label}:** {' • '.join(contact_info)}")
     else:
         st.write(f"**{label}:** {display_name}")
-
-from storage.json_db import JobSearchDB
-from ai.job_matcher import JobMatcher, get_default_user_profile
-from storage.auth_utils import is_user_logged_in, login, logout
 
 
 def show_application_card(app: Application, db: JobSearchDB):
@@ -149,6 +149,16 @@ def show_application_card(app: Application, db: JobSearchDB):
 
                     if reqs.get("role_level"):
                         st.write(f"**Level:** {reqs['role_level']}")
+
+            # AI Analysis button (if not already analyzed)
+            if not app.match_score or app.match_score == 0:
+                has_description = bool(app.job_description and app.job_description.strip())
+                has_job_url = bool(app.job_url and app.job_url.strip())
+
+                if has_description or has_job_url:
+                    st.divider()
+                    if st.button("🤖 Run AI Analysis", key=f"analyze_{app.id}"):
+                        st.info("💡 Click 'View' button to go to the Analysis tab for detailed AI analysis")
 
             # Generate cover letter button
             if app.job_description:
@@ -284,61 +294,96 @@ def show_application_detail(db: JobSearchDB, app_id: str):
     with tab2:
         st.subheader("AI Analysis & Match Score")
 
+        # Determine if we can run analysis (need either job description or job URL)
+        has_description = bool(app.job_description and app.job_description.strip())
+        has_job_url = bool(app.job_url and app.job_url.strip())
+        can_analyze = has_description or has_job_url
+
         # Button to run/re-run analysis
-        if app.job_description:
-            col_btn1, col_btn2 = st.columns([1, 3])
-            with col_btn1:
-                analyze_button_label = "🔄 Re-analyze with AI" if (app.match_score and app.match_score > 0) else "🤖 Analyze with AI"
-                run_analysis = st.button(analyze_button_label, type="primary", use_container_width=True)
+        if can_analyze:
+            analyze_button_label = "🔄 Re-analyze with AI" if (app.match_score and app.match_score > 0) else "🤖 Analyze with AI"
+
+            # Show what will be analyzed
+            if has_description and has_job_url:
+                st.caption("ℹ️ Will use existing job description for analysis")
+            elif has_job_url and not has_description:
+                st.caption(f"ℹ️ Will fetch job description from: {app.job_url[:60]}...")
+
+            run_analysis = st.button(analyze_button_label, type="primary", use_container_width=True)
 
             if run_analysis:
-                with st.spinner("🤖 Analyzing job description with AI..."):
-                    try:
-                        matcher = JobMatcher()
+                job_description_to_analyze = None
 
-                        # Extract requirements
-                        job_requirements = matcher.extract_requirements(app.job_description)
+                # First, try to use existing job description
+                if has_description:
+                    job_description_to_analyze = app.job_description
+                # Otherwise, fetch from URL
+                elif has_job_url:
+                    with st.spinner(f"🌐 Fetching job description from URL..."):
+                        success, fetched_content = fetch_job_description_from_url(app.job_url)
 
-                        # Calculate match score
-                        user_profile = get_default_user_profile()
-                        match_analysis = matcher.calculate_match_score(
-                            job_requirements,
-                            user_profile
-                        )
+                        if success:
+                            st.success("✅ Job description fetched successfully!")
+                            job_description_to_analyze = fetched_content
 
-                        match_score = match_analysis.get("match_score", 0)
-                        overall_score = match_analysis.get("overall_score", 0)
+                            # Save the fetched description to the database
+                            db.update_application(app_id, {
+                                'job_description': fetched_content
+                            })
+                            st.info("💾 Job description saved to application")
+                        else:
+                            st.error(f"❌ Failed to fetch job description: {fetched_content}")
+                            st.caption("Please add the job description manually in the Edit tab and try again.")
 
-                        # Update application in database
-                        db.update_application(app_id, {
-                            'job_requirements': job_requirements,
-                            'match_score': match_score
-                        })
+                # Run AI analysis if we have a description
+                if job_description_to_analyze:
+                    with st.spinner("🤖 Analyzing job description with AI..."):
+                        try:
+                            matcher = JobMatcher()
 
-                        st.success(f"✅ Analysis complete! Match Score: {overall_score}/100")
+                            # Extract requirements
+                            job_requirements = matcher.extract_requirements(job_description_to_analyze)
 
-                        # Show quick preview
-                        with st.expander("📋 View Analysis Summary"):
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                st.write("**Matching Skills:**")
-                                for skill in match_analysis.get("matching_skills", [])[:5]:
-                                    st.write(f"✅ {skill}")
-                            with col2:
-                                st.write("**Missing Skills:**")
-                                for skill in match_analysis.get("missing_skills", [])[:5]:
-                                    st.write(f"⚠️ {skill}")
+                            # Calculate match score
+                            user_profile = get_default_user_profile()
+                            match_analysis = matcher.calculate_match_score(
+                                job_requirements,
+                                user_profile
+                            )
 
-                            st.write("**Recommendation:**",
-                                    match_analysis.get("recommendation", "Review manually"))
+                            match_score = match_analysis.get("match_score", 0)
+                            overall_score = match_analysis.get("overall_score", 0)
 
-                        st.rerun()
+                            # Update application in database
+                            db.update_application(app_id, {
+                                'job_requirements': job_requirements,
+                                'match_score': match_score
+                            })
 
-                    except Exception as e:
-                        st.error(f"❌ AI analysis failed: {str(e)}")
-                        st.caption("Please check that your Google API key is configured correctly.")
+                            st.success(f"✅ Analysis complete! Match Score: {overall_score}/100")
+
+                            # Show quick preview
+                            with st.expander("📋 View Analysis Summary", expanded=True):
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.write("**Matching Skills:**")
+                                    for skill in match_analysis.get("matching_skills", [])[:5]:
+                                        st.write(f"✅ {skill}")
+                                with col2:
+                                    st.write("**Missing Skills:**")
+                                    for skill in match_analysis.get("missing_skills", [])[:5]:
+                                        st.write(f"⚠️ {skill}")
+
+                                st.write("**Recommendation:**",
+                                        match_analysis.get("recommendation", "Review manually"))
+
+                            st.rerun()
+
+                        except Exception as e:
+                            st.error(f"❌ AI analysis failed: {str(e)}")
+                            st.caption("Please check that your Google API key is configured correctly.")
         else:
-            st.warning("⚠️ No job description available. Add a job description in the Edit tab to enable AI analysis.")
+            st.warning("⚠️ No job description or job URL available. Add either one in the Edit tab to enable AI analysis.")
 
         st.divider()
 
