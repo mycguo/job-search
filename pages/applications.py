@@ -14,6 +14,10 @@ from typing import Optional
 sys.path.insert(0, '.')
 
 from models.application import Application, ContactLink, create_application
+from storage.json_db import JobSearchDB
+from ai.job_matcher import JobMatcher, get_default_user_profile
+from storage.auth_utils import is_user_logged_in, login, logout
+from pages.resume import fetch_job_description_from_url
 
 
 def build_contact_link(name: str, url: str, email: str = None) -> Optional[ContactLink]:
@@ -53,10 +57,6 @@ def render_contact(label: str, contact: Optional[ContactLink]):
         st.write(f"**{label}:** {' • '.join(contact_info)}")
     else:
         st.write(f"**{label}:** {display_name}")
-
-from storage.json_db import JobSearchDB
-from ai.job_matcher import JobMatcher, get_default_user_profile
-from storage.auth_utils import is_user_logged_in, login, logout
 
 
 def show_application_card(app: Application, db: JobSearchDB):
@@ -149,6 +149,16 @@ def show_application_card(app: Application, db: JobSearchDB):
 
                     if reqs.get("role_level"):
                         st.write(f"**Level:** {reqs['role_level']}")
+
+            # AI Analysis button (if not already analyzed)
+            if not app.match_score or app.match_score == 0:
+                has_description = bool(app.job_description and app.job_description.strip())
+                has_job_url = bool(app.job_url and app.job_url.strip())
+
+                if has_description or has_job_url:
+                    st.divider()
+                    if st.button("🤖 Run AI Analysis", key=f"analyze_{app.id}"):
+                        st.info("💡 Click 'View' button to go to the Analysis tab for detailed AI analysis")
 
             # Generate cover letter button
             if app.job_description:
@@ -284,6 +294,99 @@ def show_application_detail(db: JobSearchDB, app_id: str):
     with tab2:
         st.subheader("AI Analysis & Match Score")
 
+        # Determine if we can run analysis (need either job description or job URL)
+        has_description = bool(app.job_description and app.job_description.strip())
+        has_job_url = bool(app.job_url and app.job_url.strip())
+        can_analyze = has_description or has_job_url
+
+        # Button to run/re-run analysis
+        if can_analyze:
+            analyze_button_label = "🔄 Re-analyze with AI" if (app.match_score and app.match_score > 0) else "🤖 Analyze with AI"
+
+            # Show what will be analyzed
+            if has_description and has_job_url:
+                st.caption("ℹ️ Will use existing job description for analysis")
+            elif has_job_url and not has_description:
+                st.caption(f"ℹ️ Will fetch job description from: {app.job_url[:60]}...")
+
+            run_analysis = st.button(analyze_button_label, type="primary", use_container_width=True)
+
+            if run_analysis:
+                job_description_to_analyze = None
+
+                # First, try to use existing job description
+                if has_description:
+                    job_description_to_analyze = app.job_description
+                # Otherwise, fetch from URL
+                elif has_job_url:
+                    with st.spinner(f"🌐 Fetching job description from URL..."):
+                        success, fetched_content = fetch_job_description_from_url(app.job_url)
+
+                        if success:
+                            st.success("✅ Job description fetched successfully!")
+                            job_description_to_analyze = fetched_content
+
+                            # Save the fetched description to the database
+                            db.update_application(app_id, {
+                                'job_description': fetched_content
+                            })
+                            st.info("💾 Job description saved to application")
+                        else:
+                            st.error(f"❌ Failed to fetch job description: {fetched_content}")
+                            st.caption("Please add the job description manually in the Edit tab and try again.")
+
+                # Run AI analysis if we have a description
+                if job_description_to_analyze:
+                    with st.spinner("🤖 Analyzing job description with AI..."):
+                        try:
+                            matcher = JobMatcher()
+
+                            # Extract requirements
+                            job_requirements = matcher.extract_requirements(job_description_to_analyze)
+
+                            # Calculate match score
+                            user_profile = get_default_user_profile()
+                            match_analysis = matcher.calculate_match_score(
+                                job_requirements,
+                                user_profile
+                            )
+
+                            match_score = match_analysis.get("match_score", 0)
+                            overall_score = match_analysis.get("overall_score", 0)
+
+                            # Update application in database
+                            db.update_application(app_id, {
+                                'job_requirements': job_requirements,
+                                'match_score': match_score
+                            })
+
+                            st.success(f"✅ Analysis complete! Match Score: {overall_score}/100")
+
+                            # Show quick preview
+                            with st.expander("📋 View Analysis Summary", expanded=True):
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.write("**Matching Skills:**")
+                                    for skill in match_analysis.get("matching_skills", [])[:5]:
+                                        st.write(f"✅ {skill}")
+                                with col2:
+                                    st.write("**Missing Skills:**")
+                                    for skill in match_analysis.get("missing_skills", [])[:5]:
+                                        st.write(f"⚠️ {skill}")
+
+                                st.write("**Recommendation:**",
+                                        match_analysis.get("recommendation", "Review manually"))
+
+                            st.rerun()
+
+                        except Exception as e:
+                            st.error(f"❌ AI analysis failed: {str(e)}")
+                            st.caption("Please check that your Google API key is configured correctly.")
+        else:
+            st.warning("⚠️ No job description or job URL available. Add either one in the Edit tab to enable AI analysis.")
+
+        st.divider()
+
         if app.match_score and app.match_score > 0:
             col1, col2, col3 = st.columns(3)
 
@@ -309,7 +412,7 @@ def show_application_detail(db: JobSearchDB, app_id: str):
             st.divider()
             st.progress(app.match_score)
         else:
-            st.info("No AI analysis available for this application")
+            st.info("💡 Click the button above to run AI analysis on this application")
 
         # Job requirements
         if app.job_requirements:
@@ -414,10 +517,36 @@ def show_application_detail(db: JobSearchDB, app_id: str):
                     st.error("❌ Failed to add event. Please try again.")
 
     with tab4:
-        # Edit form - shown directly
+        # Edit form - shown directly when tab is clicked
         st.markdown("### ✏️ Edit Application Details")
-
-        with st.expander("Edit Form", expanded=True):
+        
+        # Control form visibility - automatically expand when tab is active
+        # Collapses after save/cancel
+        edit_expanded_key = f'edit_expanded_{app.id}'
+        collapse_flag_key = f'just_collapsed_{app.id}'
+        
+        # Check if we just collapsed (from Save/Cancel)
+        just_collapsed = st.session_state.get(collapse_flag_key, False)
+        
+        # If we just collapsed, keep it collapsed for this render
+        # The flag will be cleared when user interacts with any widget in the tab
+        if just_collapsed:
+            st.session_state[edit_expanded_key] = False
+        else:
+            # Tab is active and we didn't just collapse, so show the form
+            st.session_state[edit_expanded_key] = True
+        
+        edit_expanded = st.session_state.get(edit_expanded_key, True)
+        
+        # If collapsed, show a button to expand (but make it minimal)
+        if not edit_expanded:
+            if st.button("✏️ Edit Application", type="primary", key=f"expand_edit_{app.id}"):
+                st.session_state[edit_expanded_key] = True
+                st.session_state[collapse_flag_key] = False
+                st.rerun()
+        
+        # Render the form
+        if edit_expanded:
             col1, col2 = st.columns(2)
 
             with col1:
@@ -492,7 +621,12 @@ def show_application_detail(db: JobSearchDB, app_id: str):
             col1, col2 = st.columns(2)
 
             with col1:
-                if st.button("💾 Save Changes", type="primary", use_container_width=True):
+                save_clicked = st.button("💾 Save Changes", type="primary", use_container_width=True, key=f"save_btn_{app.id}")
+                if save_clicked:
+                    # Collapse the edit form and set flag to prevent immediate re-expansion
+                    st.session_state[edit_expanded_key] = False
+                    st.session_state[collapse_flag_key] = True
+                    
                     # Prepare updates
                     updates = {
                         'company': new_company,
@@ -510,12 +644,15 @@ def show_application_detail(db: JobSearchDB, app_id: str):
 
                     # Update in database
                     db.update_application(app_id, updates)
-
                     st.success("✅ Application updated successfully!")
                     st.rerun()
 
             with col2:
-                if st.button("✕ Cancel", use_container_width=True):
+                cancel_clicked = st.button("✕ Cancel", use_container_width=True, key=f"cancel_btn_{app.id}")
+                if cancel_clicked:
+                    # Collapse the edit form and set flag to prevent immediate re-expansion
+                    st.session_state[edit_expanded_key] = False
+                    st.session_state[collapse_flag_key] = True
                     st.rerun()
 
         st.divider()
