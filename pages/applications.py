@@ -416,8 +416,23 @@ def show_application_detail(db: JobSearchDB, app_id: str):
     with tab4:
         # Edit form - shown directly
         st.markdown("### ✏️ Edit Application Details")
-
-        with st.expander("Edit Form", expanded=True):
+        
+        # Control form visibility - default expanded, collapses after save/cancel
+        # Only initialize to True if state doesn't exist (don't override False)
+        edit_expanded_key = f'edit_expanded_{app.id}'
+        if edit_expanded_key not in st.session_state:
+            st.session_state[edit_expanded_key] = True
+        
+        edit_expanded = st.session_state[edit_expanded_key]
+        
+        # Toggle button to show/hide form
+        if not edit_expanded:
+            if st.button("✏️ Show Edit Form", key=f"show_edit_{app.id}"):
+                st.session_state[edit_expanded_key] = True
+                st.rerun()
+        
+        # Conditionally render the form
+        if edit_expanded:
             col1, col2 = st.columns(2)
 
             with col1:
@@ -492,7 +507,11 @@ def show_application_detail(db: JobSearchDB, app_id: str):
             col1, col2 = st.columns(2)
 
             with col1:
-                if st.button("💾 Save Changes", type="primary", use_container_width=True):
+                save_clicked = st.button("💾 Save Changes", type="primary", use_container_width=True, key=f"save_btn_{app.id}")
+                if save_clicked:
+                    # Collapse the edit form FIRST before any other operations
+                    st.session_state[edit_expanded_key] = False
+                    
                     # Prepare updates
                     updates = {
                         'company': new_company,
@@ -510,12 +529,14 @@ def show_application_detail(db: JobSearchDB, app_id: str):
 
                     # Update in database
                     db.update_application(app_id, updates)
-
                     st.success("✅ Application updated successfully!")
                     st.rerun()
 
             with col2:
-                if st.button("✕ Cancel", use_container_width=True):
+                cancel_clicked = st.button("✕ Cancel", use_container_width=True, key=f"cancel_btn_{app.id}")
+                if cancel_clicked:
+                    # Collapse the edit form FIRST
+                    st.session_state[edit_expanded_key] = False
                     st.rerun()
 
         st.divider()
