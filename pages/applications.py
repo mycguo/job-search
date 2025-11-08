@@ -284,6 +284,64 @@ def show_application_detail(db: JobSearchDB, app_id: str):
     with tab2:
         st.subheader("AI Analysis & Match Score")
 
+        # Button to run/re-run analysis
+        if app.job_description:
+            col_btn1, col_btn2 = st.columns([1, 3])
+            with col_btn1:
+                analyze_button_label = "🔄 Re-analyze with AI" if (app.match_score and app.match_score > 0) else "🤖 Analyze with AI"
+                run_analysis = st.button(analyze_button_label, type="primary", use_container_width=True)
+
+            if run_analysis:
+                with st.spinner("🤖 Analyzing job description with AI..."):
+                    try:
+                        matcher = JobMatcher()
+
+                        # Extract requirements
+                        job_requirements = matcher.extract_requirements(app.job_description)
+
+                        # Calculate match score
+                        user_profile = get_default_user_profile()
+                        match_analysis = matcher.calculate_match_score(
+                            job_requirements,
+                            user_profile
+                        )
+
+                        match_score = match_analysis.get("match_score", 0)
+                        overall_score = match_analysis.get("overall_score", 0)
+
+                        # Update application in database
+                        db.update_application(app_id, {
+                            'job_requirements': job_requirements,
+                            'match_score': match_score
+                        })
+
+                        st.success(f"✅ Analysis complete! Match Score: {overall_score}/100")
+
+                        # Show quick preview
+                        with st.expander("📋 View Analysis Summary"):
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.write("**Matching Skills:**")
+                                for skill in match_analysis.get("matching_skills", [])[:5]:
+                                    st.write(f"✅ {skill}")
+                            with col2:
+                                st.write("**Missing Skills:**")
+                                for skill in match_analysis.get("missing_skills", [])[:5]:
+                                    st.write(f"⚠️ {skill}")
+
+                            st.write("**Recommendation:**",
+                                    match_analysis.get("recommendation", "Review manually"))
+
+                        st.rerun()
+
+                    except Exception as e:
+                        st.error(f"❌ AI analysis failed: {str(e)}")
+                        st.caption("Please check that your Google API key is configured correctly.")
+        else:
+            st.warning("⚠️ No job description available. Add a job description in the Edit tab to enable AI analysis.")
+
+        st.divider()
+
         if app.match_score and app.match_score > 0:
             col1, col2, col3 = st.columns(3)
 
@@ -309,7 +367,7 @@ def show_application_detail(db: JobSearchDB, app_id: str):
             st.divider()
             st.progress(app.match_score)
         else:
-            st.info("No AI analysis available for this application")
+            st.info("💡 Click the button above to run AI analysis on this application")
 
         # Job requirements
         if app.job_requirements:
