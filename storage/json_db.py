@@ -332,6 +332,91 @@ class JobSearchDB:
         print(f"❌ Application not found: {app_id}")
         return False
 
+    def update_timeline_event(self, app_id: str, event_index: int, event_type: str = None, event_date: str = None, notes: str = None) -> bool:
+        """
+        Update a timeline event in an application.
+
+        Args:
+            app_id: Application ID
+            event_index: Index of the event in the timeline
+            event_type: New event type (optional)
+            event_date: New event date (optional, format: YYYY-MM-DD)
+            notes: New notes (optional)
+
+        Returns:
+            True if successful
+        """
+        applications = self._read_json(self.applications_file)
+
+        for i, app_dict in enumerate(applications):
+            if app_dict['id'] == app_id:
+                app = Application.from_dict(app_dict)
+                
+                # Check if event_index is valid
+                if event_index < 0 or event_index >= len(app.timeline):
+                    print(f"❌ Invalid event index: {event_index}")
+                    return False
+                
+                # Update the event
+                event = app.timeline[event_index]
+                if event_type is not None:
+                    event.event_type = event_type
+                if event_date is not None:
+                    event.date = event_date
+                if notes is not None:
+                    event.notes = notes
+                
+                app.updated_at = datetime.now().isoformat()
+
+                applications[i] = app.to_dict()
+                self._write_json(self.applications_file, applications)
+
+                print(f"✅ Updated timeline event at index {event_index}")
+                return True
+
+        print(f"❌ Application not found: {app_id}")
+        return False
+
+    def delete_timeline_event(self, app_id: str, event_index: int) -> bool:
+        """
+        Delete a timeline event from an application.
+
+        Args:
+            app_id: Application ID
+            event_index: Index of the event in the timeline
+
+        Returns:
+            True if successful
+        """
+        applications = self._read_json(self.applications_file)
+
+        for i, app_dict in enumerate(applications):
+            if app_dict['id'] == app_id:
+                app = Application.from_dict(app_dict)
+                
+                # Check if event_index is valid
+                if event_index < 0 or event_index >= len(app.timeline):
+                    print(f"❌ Invalid event index: {event_index}")
+                    return False
+                
+                # Don't allow deleting the first event (initial application)
+                if event_index == 0:
+                    print(f"❌ Cannot delete the initial application event")
+                    return False
+                
+                # Delete the event
+                del app.timeline[event_index]
+                app.updated_at = datetime.now().isoformat()
+
+                applications[i] = app.to_dict()
+                self._write_json(self.applications_file, applications)
+
+                print(f"✅ Deleted timeline event at index {event_index}")
+                return True
+
+        print(f"❌ Application not found: {app_id}")
+        return False
+
     # ==================== STATISTICS ====================
 
     def get_stats(self) -> Dict:
