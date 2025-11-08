@@ -414,24 +414,35 @@ def show_application_detail(db: JobSearchDB, app_id: str):
                     st.error("❌ Failed to add event. Please try again.")
 
     with tab4:
-        # Edit form - shown directly
+        # Edit form - shown directly when tab is clicked
         st.markdown("### ✏️ Edit Application Details")
         
-        # Control form visibility - default expanded, collapses after save/cancel
-        # Only initialize to True if state doesn't exist (don't override False)
+        # Control form visibility - automatically expand when tab is active
+        # Collapses after save/cancel
         edit_expanded_key = f'edit_expanded_{app.id}'
-        if edit_expanded_key not in st.session_state:
+        collapse_flag_key = f'just_collapsed_{app.id}'
+        
+        # Check if we just collapsed (from Save/Cancel)
+        just_collapsed = st.session_state.get(collapse_flag_key, False)
+        
+        # If we just collapsed, keep it collapsed for this render
+        # The flag will be cleared when user interacts with any widget in the tab
+        if just_collapsed:
+            st.session_state[edit_expanded_key] = False
+        else:
+            # Tab is active and we didn't just collapse, so show the form
             st.session_state[edit_expanded_key] = True
         
-        edit_expanded = st.session_state[edit_expanded_key]
+        edit_expanded = st.session_state.get(edit_expanded_key, True)
         
-        # Toggle button to show/hide form
+        # If collapsed, show a button to expand (but make it minimal)
         if not edit_expanded:
-            if st.button("✏️ Show Edit Form", key=f"show_edit_{app.id}"):
+            if st.button("✏️ Edit Application", type="primary", key=f"expand_edit_{app.id}"):
                 st.session_state[edit_expanded_key] = True
+                st.session_state[collapse_flag_key] = False
                 st.rerun()
         
-        # Conditionally render the form
+        # Render the form
         if edit_expanded:
             col1, col2 = st.columns(2)
 
@@ -509,8 +520,9 @@ def show_application_detail(db: JobSearchDB, app_id: str):
             with col1:
                 save_clicked = st.button("💾 Save Changes", type="primary", use_container_width=True, key=f"save_btn_{app.id}")
                 if save_clicked:
-                    # Collapse the edit form FIRST before any other operations
+                    # Collapse the edit form and set flag to prevent immediate re-expansion
                     st.session_state[edit_expanded_key] = False
+                    st.session_state[collapse_flag_key] = True
                     
                     # Prepare updates
                     updates = {
@@ -535,8 +547,9 @@ def show_application_detail(db: JobSearchDB, app_id: str):
             with col2:
                 cancel_clicked = st.button("✕ Cancel", use_container_width=True, key=f"cancel_btn_{app.id}")
                 if cancel_clicked:
-                    # Collapse the edit form FIRST
+                    # Collapse the edit form and set flag to prevent immediate re-expansion
                     st.session_state[edit_expanded_key] = False
+                    st.session_state[collapse_flag_key] = True
                     st.rerun()
 
         st.divider()
