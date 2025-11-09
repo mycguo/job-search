@@ -128,50 +128,70 @@ def main():
                         if f'edit_add_count_{label}' not in st.session_state:
                             st.session_state[f'edit_add_count_{label}'] = 0
 
-                        new_contents = []
+                        # Create input fields for new content
                         for i in range(st.session_state[f'edit_add_count_{label}']):
-                            new_content = st.text_input(
+                            st.text_input(
                                 f"New {i+1}",
                                 placeholder="New content entry...",
-                                key=f"new_content_{label}_{i}",
+                                key=f"new_content_edit_{label}_{i}",
                                 label_visibility="collapsed"
                             )
-                            if new_content.strip():
-                                new_contents.append(new_content)
 
                         # Buttons
                         col1, col2, col3 = st.columns(3)
                         with col1:
-                            if st.form_submit_button("➕ Add Row"):
-                                st.session_state[f'edit_add_count_{label}'] += 1
-                                st.rerun()
+                            add_row = st.form_submit_button("➕ Add Row")
 
                         with col2:
-                            if st.form_submit_button("💾 Save", type="primary"):
-                                # Update existing entries
-                                for entry in entries_to_update:
-                                    if entry['id'] not in entries_to_delete and entry['content'].strip():
-                                        db.update_quick_note(entry['id'], new_category_name, entry['content'], note_type="text")
-
-                                # Delete marked entries
-                                for note_id in entries_to_delete:
-                                    db.delete_quick_note(note_id)
-
-                                # Add new entries
-                                for new_content in new_contents:
-                                    db.add_quick_note(new_category_name, new_content, note_type="text")
-
-                                # Reset state
-                                st.session_state[category_key] = False
-                                st.session_state[f'edit_add_count_{label}'] = 0
-                                st.success(f"✅ Updated category '{label}'")
-                                st.rerun()
+                            save = st.form_submit_button("💾 Save", type="primary")
 
                         with col3:
-                            if st.form_submit_button("✕ Cancel"):
-                                st.session_state[category_key] = False
-                                st.session_state[f'edit_add_count_{label}'] = 0
-                                st.rerun()
+                            cancel = st.form_submit_button("✕ Cancel")
+
+                        # Handle button actions
+                        if add_row:
+                            st.session_state[f'edit_add_count_{label}'] += 1
+                            st.rerun()
+
+                        if save:
+                            # Update existing entries
+                            for entry in entries_to_update:
+                                if entry['id'] not in entries_to_delete and entry['content'].strip():
+                                    db.update_quick_note(entry['id'], new_category_name, entry['content'], note_type="text")
+
+                            # Delete marked entries
+                            for note_id in entries_to_delete:
+                                db.delete_quick_note(note_id)
+
+                            # Add new entries - read from session state after form submission
+                            for i in range(st.session_state[f'edit_add_count_{label}']):
+                                key = f"new_content_edit_{label}_{i}"
+                                if key in st.session_state:
+                                    new_content = st.session_state[key]
+                                    if new_content and new_content.strip():
+                                        db.add_quick_note(new_category_name, new_content, note_type="text")
+
+                            # Reset state and clear input keys
+                            for i in range(st.session_state[f'edit_add_count_{label}']):
+                                key = f"new_content_edit_{label}_{i}"
+                                if key in st.session_state:
+                                    del st.session_state[key]
+
+                            st.session_state[category_key] = False
+                            st.session_state[f'edit_add_count_{label}'] = 0
+                            st.success(f"✅ Updated category '{label}'")
+                            st.rerun()
+
+                        if cancel:
+                            # Clear input keys
+                            for i in range(st.session_state[f'edit_add_count_{label}']):
+                                key = f"new_content_edit_{label}_{i}"
+                                if key in st.session_state:
+                                    del st.session_state[key]
+
+                            st.session_state[category_key] = False
+                            st.session_state[f'edit_add_count_{label}'] = 0
+                            st.rerun()
 
             # Display mode - show category and content on one line
             else:
@@ -221,14 +241,19 @@ def main():
 
                                 col_save, col_delete, col_add, col_cancel = st.columns(4)
                                 with col_save:
-                                    if st.form_submit_button("💾 Save", width="stretch"):
+                                    save_clicked = st.form_submit_button("💾 Save", width="stretch")
+                                    if save_clicked:
                                         if edited_content.strip():
+                                            # Update the existing note
                                             db.update_quick_note(note_id, label, edited_content, note_type="text")
+                                            
                                             # Add new row if provided
-                                            if st.session_state[add_new_key] and f"new_entry_{note_id}" in locals():
-                                                new_val = st.session_state.get(f"new_entry_{note_id}", "")
-                                                if new_val.strip():
-                                                    db.add_quick_note(label, new_val, note_type="text")
+                                            if st.session_state[add_new_key]:
+                                                new_entry_key = f"new_entry_{note_id}"
+                                                new_val = st.session_state.get(new_entry_key, "")
+                                                if new_val and new_val.strip():
+                                                    db.add_quick_note(label, new_val.strip(), note_type="text")
+                                            
                                             st.session_state[note_edit_key] = False
                                             st.session_state[add_new_key] = False
                                             st.success("✅ Updated!")
