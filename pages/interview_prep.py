@@ -887,17 +887,25 @@ def show_question_detail(db: InterviewDB, question_id: str):
 
         with col1:
             st.markdown("### Update Confidence")
+            
+            # Track the last saved confidence level
+            confidence_track_key = f'saved_confidence_{question.id}'
+            saved_confidence = st.session_state.get(confidence_track_key, question.confidence_level)
+            
             new_confidence = st.slider(
                 "Confidence Level",
                 min_value=1,
                 max_value=5,
                 value=question.confidence_level,
-                help="How confident are you with this answer?"
+                key=f"confidence_slider_{question.id}",
+                help="How confident are you with this answer? (Auto-saves on change)"
             )
-
-            if st.button("💾 Update Confidence", use_container_width=True):
+            
+            # Auto-save when confidence level changes from the saved value
+            if new_confidence != saved_confidence:
                 question.update_confidence(new_confidence)
                 db.update_question(question)
+                st.session_state[confidence_track_key] = new_confidence
                 st.success("✅ Confidence updated!")
                 st.rerun()
 
