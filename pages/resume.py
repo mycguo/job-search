@@ -9,6 +9,7 @@ import streamlit as st
 import sys
 from datetime import datetime
 import io
+import re
 
 # Add parent directory to path
 sys.path.insert(0, '.')
@@ -21,6 +22,112 @@ import docx
 from langchain_google_genai import ChatGoogleGenerativeAI
 import requests
 from bs4 import BeautifulSoup
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+from reportlab.lib.enums import TA_LEFT, TA_CENTER
+
+
+def generate_pdf_from_text(text: str, filename: str = "resume.pdf") -> bytes:
+    """
+    Generate a PDF from text content.
+    
+    Args:
+        text: The resume text content
+        filename: Output filename (optional)
+    
+    Returns:
+        PDF bytes
+    """
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter,
+                           rightMargin=0.75*inch, leftMargin=0.75*inch,
+                           topMargin=0.75*inch, bottomMargin=0.75*inch)
+    
+    # Container for the 'Flowable' objects
+    elements = []
+    
+    # Define styles
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        textColor='black',
+        spaceAfter=12,
+        alignment=TA_LEFT
+    )
+    
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=12,
+        textColor='black',
+        spaceAfter=6,
+        spaceBefore=12,
+        alignment=TA_LEFT,
+        fontName='Helvetica-Bold'
+    )
+    
+    normal_style = ParagraphStyle(
+        'CustomNormal',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor='black',
+        spaceAfter=6,
+        alignment=TA_LEFT,
+        leading=12
+    )
+    
+    # Parse text into paragraphs and format
+    lines = text.split('\n')
+    current_section = []
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            if current_section:
+                # Add accumulated content
+                para_text = ' '.join(current_section)
+                elements.append(Paragraph(para_text, normal_style))
+                elements.append(Spacer(1, 6))
+                current_section = []
+            continue
+        
+        # Check if this looks like a heading (all caps, short line, or ends with colon)
+        is_heading = (
+            len(line) < 50 and 
+            (line.isupper() or line.endswith(':') or 
+             any(keyword in line.lower() for keyword in ['experience', 'education', 'skills', 'summary', 'objective', 'projects', 'certifications']))
+        )
+        
+        if is_heading and current_section:
+            # Flush current section
+            para_text = ' '.join(current_section)
+            elements.append(Paragraph(para_text, normal_style))
+            elements.append(Spacer(1, 6))
+            current_section = []
+            # Add heading
+            elements.append(Paragraph(line, heading_style))
+        elif is_heading:
+            # Just add heading
+            elements.append(Paragraph(line, heading_style))
+        else:
+            # Add to current section
+            current_section.append(line)
+    
+    # Add any remaining content
+    if current_section:
+        para_text = ' '.join(current_section)
+        elements.append(Paragraph(para_text, normal_style))
+    
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.getvalue()
 
 
 def extract_text_from_resume_file(file_bytes, filename):
@@ -113,6 +220,76 @@ def fetch_job_description_from_url(url: str) -> tuple:
         return False, f"Error: {str(e)}"
 
 
+def clean_resume_text(text: str, company_name: str = "") -> str:
+    """
+    Remove introductory text and prefixes from AI-generated resume.
+    
+    Args:
+        text: The raw text from AI
+        company_name: Company name to help identify intro text
+    
+    Returns:
+        Cleaned resume text
+    """
+    # Common patterns to remove
+    intro_patterns = [
+        r"^Here is the tailored resume[^:]*:",
+        r"^Here's the tailored resume[^:]*:",
+        r"^Below is the tailored resume[^:]*:",
+        r"^The tailored resume[^:]*:",
+        r"^Tailored resume[^:]*:",
+        r"^Resume[^:]*:",
+        r"^---+\s*$",  # Remove standalone separator lines at start
+        r"^=+\s*$",  # Remove standalone separator lines at start
+    ]
+    
+    cleaned = text
+    
+    # Remove intro patterns
+    for pattern in intro_patterns:
+        cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE | re.MULTILINE)
+    
+    # Remove leading separators and whitespace
+    cleaned = re.sub(r"^[-=]+\s*", "", cleaned, flags=re.MULTILINE)
+    cleaned = cleaned.strip()
+    
+    # Only remove obvious AI intro text from the beginning
+    # Be conservative - don't remove actual resume content
+    lines = cleaned.split('\n')
+    start_idx = 0
+
+    # Only skip lines that are clearly AI intro/explanation text
+    # These are typically long sentences explaining what was done
+    for i, line in enumerate(lines):
+        line_stripped = line.strip()
+        line_lower = line.lower()
+
+        # Skip empty lines at the start
+        if not line_stripped:
+            continue
+
+        # Skip lines that are clearly AI explanations (contain phrases like "tailored", "emphasizing", etc.)
+        # But only if they're reasonably long (actual resume headers are usually short)
+        is_explanation = (
+            len(line_stripped) > 100 and
+            any(phrase in line_lower for phrase in [
+                "tailored", "emphasizing", "highlighting", "rewritten",
+                "here is", "here's", "below is", "the resume"
+            ])
+        )
+
+        if is_explanation:
+            start_idx = i + 1
+        else:
+            # Found actual resume content, stop here
+            break
+
+    if start_idx > 0:
+        cleaned = '\n'.join(lines[start_idx:])
+
+    return cleaned.strip()
+
+
 def tailor_resume_with_ai(resume_text: str, job_description: str, company_name: str = "") -> tuple:
     """Use AI to tailor resume for specific job"""
     try:
@@ -121,14 +298,16 @@ def tailor_resume_with_ai(resume_text: str, job_description: str, company_name: 
         prompt = f"""You are an expert resume writer. Tailor the following resume to match the job description below.
 
 IMPORTANT INSTRUCTIONS:
-1. Keep the same overall structure and format
-2. Emphasize relevant experience and skills that match the job requirements
-3. Add or highlight keywords from the job description
-4. Quantify achievements where possible
-5. Keep it concise and impactful
-6. Maintain professional tone
-7. Do NOT fabricate experience or skills
-8. Only reframe and emphasize what's already in the resume
+1. ALWAYS START with the candidate's full name and contact information (email, phone, location, LinkedIn, etc.) - this is MANDATORY
+2. Keep the same overall structure and format
+3. Emphasize relevant experience and skills that match the job requirements
+4. Add or highlight keywords from the job description
+5. Quantify achievements where possible
+6. Keep it concise and impactful
+7. Maintain professional tone
+8. Do NOT fabricate experience or skills
+9. Only reframe and emphasize what's already in the resume
+10. Return ONLY the tailored resume text - no introductory text, no explanations, no prefixes
 
 ORIGINAL RESUME:
 {resume_text}
@@ -138,22 +317,41 @@ JOB DESCRIPTION:
 
 COMPANY: {company_name if company_name else "Not specified"}
 
-Please provide the tailored resume text. Maintain the same structure but optimize the content to match the job requirements."""
+CRITICAL: Your response must begin with the candidate's name and contact information. Return ONLY the tailored resume text. Do not include any introductory text, explanations, or prefixes."""
 
         response = model.invoke(prompt)
         tailored_text = response.content.strip()
+        
+        # Clean up any introductory text that might have been added
+        tailored_text = clean_resume_text(tailored_text, company_name)
 
         # Extract any additional insights
-        insights_prompt = f"""Based on the resume and job description, provide:
-1. Top 3-5 keywords/skills from the job description that were emphasized in the tailored resume
+        insights_prompt = f"""Based on the resume and job description, provide a brief analysis of the tailoring.
+
+Include:
+1. Top 3-5 keywords/skills from the job description that were emphasized
 2. A brief note about what was changed (2-3 sentences)
 
-Format as:
-KEYWORDS: keyword1, keyword2, keyword3
-CHANGES: Brief description of changes made"""
+Format your response as a concise paragraph with the following structure:
+
+**KEYWORDS:** keyword1, keyword2, keyword3, keyword4, keyword5
+
+**CHANGES:** The resume's summary was rewritten to directly address the job description's emphasis on [specific aspects]. Bullet points under experience were rephrased to highlight achievements in [relevant areas], using language from the job description. Quantifiable results related to [specific metrics] were also added.
+
+Keep it concise and use this exact formatting."""
 
         insights_response = model.invoke(insights_prompt)
-        insights = insights_response.content.strip()
+        insights_raw = insights_response.content.strip()
+
+        # Format insights to avoid large headings
+        # Remove any markdown headers that the AI might have added
+        insights = insights_raw.replace("# ", "").replace("## ", "").replace("### ", "")
+
+        # Replace any standalone "KEYWORDS:" or "CHANGES:" with properly formatted text
+        insights = insights.replace("KEYWORDS:", "**Keywords:**")
+        insights = insights.replace("CHANGES:", "\n\n**Changes:**")
+        insights = insights.replace("**KEYWORDS:**", "**Keywords:**")
+        insights = insights.replace("**CHANGES:**", "\n\n**Changes:**")
 
         return True, tailored_text, insights
 
@@ -173,145 +371,211 @@ def show_tailor_resume_form(db: ResumeDB):
         st.warning("No master resumes found. Please upload a master resume first!")
         return
 
-    with st.form("tailor_resume_form", clear_on_submit=False):
-        # Select master resume
-        resume_options = {r.name: r for r in master_resumes}
-        selected_resume_name = st.selectbox(
-            "Select Master Resume *",
-            options=list(resume_options.keys()),
-            help="Choose the master resume to tailor"
-        )
+    # Check if we should show the form or the results
+    if 'tailored_resume_data' in st.session_state:
+        # Skip form display - will show results below
+        pass
+    else:
+        # Initialize input method in session state if not set
+        if 'tailor_input_method' not in st.session_state:
+            st.session_state['tailor_input_method'] = "Paste Description"
 
-        selected_resume = resume_options[selected_resume_name]
-
-        # Company and job info
-        col1, col2 = st.columns(2)
-
-        with col1:
-            company_name = st.text_input(
-                "Company Name *",
-                placeholder="e.g., Google, Microsoft, etc.",
-                help="Company you're applying to"
-            )
-
-        with col2:
-            job_title = st.text_input(
-                "Job Title (optional)",
-                placeholder="e.g., Senior Software Engineer",
-                help="Position title"
-            )
-
-        # Job description input
+        # Job description input method (outside form so it triggers rerun)
         st.markdown("### Job Description")
-
         input_method = st.radio(
             "Input Method",
             ["Paste Description", "Fetch from URL"],
-            horizontal=True
+            horizontal=True,
+            key="tailor_input_method"
         )
 
-        if input_method == "Paste Description":
-            job_description = st.text_area(
-                "Job Description *",
-                placeholder="Paste the full job description here...",
-                height=300,
-                help="Paste the complete job posting"
+        with st.form("tailor_resume_form", clear_on_submit=False):
+            # Select master resume
+            resume_options = {r.name: r for r in master_resumes}
+            selected_resume_name = st.selectbox(
+                "Select Master Resume *",
+                options=list(resume_options.keys()),
+                help="Choose the master resume to tailor"
             )
-        else:
-            job_url = st.text_input(
-                "Job Posting URL *",
-                placeholder="https://...",
-                help="URL to the job posting"
-            )
+
+            selected_resume = resume_options[selected_resume_name]
+
+            # Company and job info
+            col1, col2 = st.columns(2)
+
+            with col1:
+                company_name = st.text_input(
+                    "Company Name *",
+                    placeholder="e.g., Google, Microsoft, etc.",
+                    help="Company you're applying to"
+                )
+
+            with col2:
+                job_title = st.text_input(
+                    "Job Title (optional)",
+                    placeholder="e.g., Senior Software Engineer",
+                    help="Position title"
+                )
+
+            # Job description input based on selected method
             job_description = ""
+            job_url = ""
+            
+            if input_method == "Paste Description":
+                job_description = st.text_area(
+                    "Job Description *",
+                    placeholder="Paste the full job description here...",
+                    height=300,
+                    help="Paste the complete job posting",
+                    key="tailor_job_description"
+                )
+            elif input_method == "Fetch from URL":
+                job_url = st.text_input(
+                    "Job Posting URL *",
+                    placeholder="https://...",
+                    help="URL to the job posting",
+                    key="tailor_job_url"
+                )
 
-        # Additional notes
-        tailoring_notes = st.text_area(
-            "Tailoring Notes (optional)",
-            placeholder="Any specific aspects you want to emphasize...",
-            height=100
-        )
+            # Additional notes
+            tailoring_notes = st.text_area(
+                "Tailoring Notes (optional)",
+                placeholder="Any specific aspects you want to emphasize...",
+                height=100
+            )
 
-        submit = st.form_submit_button("🎯 Tailor Resume", type="primary")
+            submit = st.form_submit_button("🎯 Tailor Resume", type="primary")
 
-        if submit:
-            if not company_name:
-                st.error("⚠️ Please provide the company name!")
-                return
-
-            # Get job description
-            if input_method == "Fetch from URL":
-                if not job_url:
-                    st.error("⚠️ Please provide a job posting URL!")
+            if submit:
+                if not company_name:
+                    st.error("⚠️ Please provide the company name!")
                     return
 
-                with st.spinner("Fetching job description from URL..."):
-                    success, result = fetch_job_description_from_url(job_url)
-
-                    if not success:
-                        st.error(f"❌ {result}")
+                # Get job description
+                if input_method == "Fetch from URL":
+                    if not job_url:
+                        st.error("⚠️ Please provide a job posting URL!")
                         return
 
-                    job_description = result
-                    st.success("✅ Job description fetched successfully!")
+                    with st.spinner("Fetching job description from URL..."):
+                        success, result = fetch_job_description_from_url(job_url)
 
-                    with st.expander("📄 Fetched Job Description"):
-                        st.text(job_description[:1000] + "..." if len(job_description) > 1000 else job_description)
+                        if not success:
+                            st.error(f"❌ {result}")
+                            return
 
-            if not job_description:
-                st.error("⚠️ Please provide a job description!")
-                return
+                        job_description = result
+                        st.success("✅ Job description fetched successfully!")
 
-            # Tailor the resume
-            with st.spinner("✨ AI is tailoring your resume... This may take 15-30 seconds"):
-                success, tailored_text, insights = tailor_resume_with_ai(
-                    selected_resume.full_text,
-                    job_description,
-                    company_name
-                )
+                        with st.expander("📄 Fetched Job Description"):
+                            st.text(job_description[:1000] + "..." if len(job_description) > 1000 else job_description)
 
-                if not success:
-                    st.error(f"❌ Error tailoring resume: {tailored_text}")
+                if not job_description:
+                    st.error("⚠️ Please provide a job description!")
                     return
 
-                # Create tailored resume
-                tailored_resume = create_tailored_resume(
-                    master_resume=selected_resume,
-                    job_id="",  # Optional: link to job application
-                    company=company_name,
-                    tailoring_notes=tailoring_notes
-                )
-
-                # Update with tailored content
-                tailored_resume.full_text = tailored_text
-                tailored_resume.skills = extract_skills_from_text(tailored_text)
-
-                if job_title:
-                    tailored_resume.name = f"{company_name} - {job_title}"
-                else:
-                    tailored_resume.name = f"{company_name} Resume"
-
-                # Save to database (no file bytes for tailored resumes)
-                resume_id = db.add_resume(tailored_resume, None)
-
-                st.success(f"✅ Resume tailored successfully! (ID: {resume_id})")
-
-                # Show insights
-                if insights:
-                    with st.expander("💡 Tailoring Insights"):
-                        st.markdown(insights)
-
-                # Show preview
-                with st.expander("📄 Tailored Resume Preview"):
-                    st.text_area(
-                        "Preview",
-                        value=tailored_text[:2000] + "..." if len(tailored_text) > 2000 else tailored_text,
-                        height=400,
-                        disabled=True
+                # Tailor the resume
+                with st.spinner("✨ AI is tailoring your resume... This may take 15-30 seconds"):
+                    success, tailored_text, insights = tailor_resume_with_ai(
+                        selected_resume.full_text,
+                        job_description,
+                        company_name
                     )
 
-                st.balloons()
-                st.info("💡 You can view and download the tailored resume from the resume list")
+                    if not success:
+                        st.error(f"❌ Error tailoring resume: {tailored_text}")
+                        return
+
+                    # Create tailored resume
+                    tailored_resume = create_tailored_resume(
+                        master_resume=selected_resume,
+                        job_id="",  # Optional: link to job application
+                        company=company_name,
+                        tailoring_notes=tailoring_notes
+                    )
+
+                    # Update with tailored content
+                    tailored_resume.full_text = tailored_text
+                    tailored_resume.skills = extract_skills_from_text(tailored_text)
+
+                    if job_title:
+                        tailored_resume.name = f"{company_name} - {job_title}"
+                    else:
+                        tailored_resume.name = f"{company_name} Resume"
+
+                    # Save to database (no file bytes for tailored resumes)
+                    resume_id = db.add_resume(tailored_resume, None)
+
+                    # Store tailored resume data in session state for display outside form
+                    st.session_state['tailored_resume_data'] = {
+                        'text': tailored_text,
+                        'insights': insights,
+                        'company_name': company_name,
+                        'resume_id': resume_id
+                    }
+                    
+                    st.success(f"✅ Resume tailored successfully! (ID: {resume_id})")
+                    st.rerun()
+    
+    # Display tailored resume results outside the form (after successful submission)
+    if 'tailored_resume_data' in st.session_state:
+        tailored_data = st.session_state['tailored_resume_data']
+        tailored_text = tailored_data['text']
+        insights = tailored_data['insights']
+        company_name = tailored_data['company_name']
+        
+        # Show insights
+        if insights:
+            with st.expander("💡 Tailoring Insights"):
+                st.caption("EXAMPLE (Hypothetical):")
+                st.markdown(insights)
+
+        # Generate PDF
+        pdf_filename = f"{company_name.replace(' ', '_')}_Resume.pdf"
+        pdf_bytes = generate_pdf_from_text(tailored_text, pdf_filename)
+        
+        # Display preview and download options
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            st.markdown("### 📄 Tailored Resume Preview")
+            # Improved display with better formatting
+            st.markdown("---")
+            # Display formatted text
+            formatted_text = tailored_text.replace('\n\n', '\n').replace('\n', '  \n')
+            st.markdown(formatted_text)
+            st.markdown("---")
+        
+        with col2:
+            st.markdown("### 📥 Download Options")
+            # Download PDF button
+            st.download_button(
+                label="📄 Download as PDF",
+                data=pdf_bytes,
+                file_name=pdf_filename,
+                mime="application/pdf",
+                type="primary",
+                use_container_width=True
+            )
+            
+            # Download as text button
+            st.download_button(
+                label="📝 Download as Text",
+                data=tailored_text.encode('utf-8'),
+                file_name=f"{company_name.replace(' ', '_')}_Resume.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+            
+            st.info("💡 PDF format is recommended for job applications")
+            
+            # Clear button to reset and show form again
+            if st.button("🔄 Create Another Tailored Resume", use_container_width=True):
+                del st.session_state['tailored_resume_data']
+                st.rerun()
+
+        st.balloons()
+        st.info("💡 You can also view and download the tailored resume from the resume list")
 
 
 def show_upload_resume_form(db: ResumeDB):
@@ -771,7 +1035,7 @@ def main():
     # Key Metrics
     st.header("📊 Resume Stats")
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         st.metric(
@@ -792,13 +1056,6 @@ def main():
             "Tailored Resumes",
             stats['tailored_resumes'],
             help="Job-specific versions"
-        )
-
-    with col4:
-        st.metric(
-            "Applications",
-            stats['total_applications'],
-            help="Total applications using these resumes"
         )
 
     st.divider()

@@ -9,6 +9,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
 from pages.upload_docs import get_vector_store, get_text_chunks
 from langchain.chains.combine_documents import create_stuff_documents_chain
+from ai.web_search import search_web, format_search_results, is_search_needed, extract_search_query
 import boto3
 
 
@@ -550,25 +551,32 @@ def answer_data_query(question: str, query_type: str):
 
 
 def get_chat_chain():
+    """
+    Get chat chain for answering questions.
+    Note: Web search results are combined with context before passing to chain.
+    """
     prompt_template="""
-    Answer the questions based on local konwledge base honestly
+    Answer the questions based on the provided context honestly.
+    
+    The context may include:
+    - Local knowledge base information
+    - Web search results (if available)
+    
+    When web search results are included, cite the source URLs when relevant.
+    If information conflicts between local knowledge and web results, prioritize more recent web information for time-sensitive queries.
 
     Context:\n {context} \n
     Questions: \n {questions} \n
 
+    Provide a comprehensive answer. If web search results are included, mention source URLs when referencing them.
     Answers:
 """
     model=ChatGoogleGenerativeAI(model="gemini-2.5-flash",temperature=0.0)
-    # This is too slow
-    #model = ChatNVIDIA(
-    #    model="deepseek-ai/deepseek-r1",
-    #    api_key=nvidia_api_key,
-    #    temperature=0.7,
-    #    top_p=0.8,
-    #    max_tokens=4096
-    #)
-    #
-    prompt=PromptTemplate(template=prompt_template, input_variables=["context", "questions"], output_variables=["answers"])
+    prompt=PromptTemplate(
+        template=prompt_template, 
+        input_variables=["context", "questions"], 
+        output_variables=["answers"]
+    )
     chain = create_stuff_documents_chain(llm=model, prompt=prompt, document_variable_name="context")
     return chain
 
@@ -666,10 +674,40 @@ def user_input(user_question):
             # Normal question answering (user-specific) - use vector store
             vector_store = MilvusVectorStore()
             docs = vector_store.similarity_search(user_question)
-
+            
+            # Check if web search is needed
+            needs_web_search = is_search_needed(user_question)
+            web_results_text = ""
+            web_results = []
+            
+            if needs_web_search:
+                # Perform web search
+                search_query = extract_search_query(user_question)
+                with st.spinner(f"🌐 Searching the web for: {search_query}..."):
+                    web_results = search_web(search_query, max_results=5)
+                    if web_results:
+                        web_results_text = format_search_results(web_results)
+                        # Show search sources
+                        with st.expander("🔍 Web Search Sources", expanded=False):
+                            for i, result in enumerate(web_results, 1):
+                                st.markdown(f"**[{i}] [{result['title']}]({result['url']})**")
+                                st.caption(result['snippet'][:200] + "...")
+                    else:
+                        st.info("⚠️ No web search results found. Answering from local knowledge base only.")
+            
+            # Combine local knowledge and web results
+            # Create a combined context by adding web results as a document-like string
+            combined_context = docs.copy()
+            if web_results_text:
+                # Add web results as additional context
+                # We'll create a simple document-like object or just prepend to context
+                from langchain.docstore.document import Document
+                web_doc = Document(page_content=web_results_text, metadata={"source": "web_search"})
+                combined_context = [web_doc] + docs
+            
+            # Get chain and invoke
             chain = get_chat_chain()
-
-            response = chain.invoke({"context": docs, "questions": user_question})
+            response = chain.invoke({"context": combined_context, "questions": user_question})
 
             print(response)
             st.write("Reply: ", response)
