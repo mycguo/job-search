@@ -776,6 +776,9 @@ def main():
     st.title("🎯 Job Search Agent")
     st.markdown("Your AI-powered career companion")
 
+    # Render quick notes in sidebar (accessible from anywhere)
+    render_quick_notes()
+
     # Sidebar for quick actions
     with st.sidebar:
         # Quick save section
@@ -809,9 +812,6 @@ def main():
                             st.write(result)
                 else:
                     st.error(f"❌ Error: {result}")
-
-    # Render quick notes in sidebar (accessible from anywhere)
-    render_quick_notes()
 
     # Initialize vector store if empty (to avoid errors on first query)
     try:

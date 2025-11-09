@@ -12,7 +12,6 @@ def render_quick_notes():
 
     # Quick Notes section in sidebar
     with st.sidebar:
-        st.divider()
 
         # Button to open in new tab using custom HTML
         st.markdown("""
@@ -33,4 +32,4 @@ def render_quick_notes():
             </a>
         """, unsafe_allow_html=True)
 
-        st.caption("Opens in a new tab for easy side-by-side reference")
+        st.caption("Opens in a new tab")
