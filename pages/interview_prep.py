@@ -464,21 +464,11 @@ def show_add_question_form(db: InterviewDB):
             answer_star = None
 
         # Additional details
-        col1, col2 = st.columns(2)
-
-        with col1:
-            companies = st.text_input(
-                "Companies (comma-separated)",
-                placeholder="e.g., Amazon, Google, Meta",
-                help="Companies that ask this question"
-            )
-
-        with col2:
-            tags = st.text_input(
-                "Tags (comma-separated)",
-                placeholder="e.g., leadership, team-management",
-                help="Tags for easier searching"
-            )
+        tags = st.text_input(
+            "Tags (comma-separated)",
+            placeholder="e.g., leadership, team-management",
+            help="Tags for easier searching"
+        )
 
         notes = st.text_area(
             "Notes (optional)",
@@ -506,8 +496,8 @@ def show_add_question_form(db: InterviewDB):
                 st.error("⚠️ Please fill in all required fields!")
             else:
                 try:
-                    # Parse companies and tags
-                    company_list = [c.strip() for c in companies.split(',')] if companies else []
+                    # Parse tags (companies removed from UI)
+                    company_list = []  # Keep empty for backward compatibility
                     tag_list = [t.strip() for t in tags.split(',')] if tags else []
 
                     # Create question
@@ -874,9 +864,6 @@ def show_question_detail(db: InterviewDB, question_id: str):
         if question.tags:
             st.write("**Tags:**", ", ".join(question.tags))
 
-        if question.companies:
-            st.write("**Companies:**", ", ".join(question.companies))
-
         st.divider()
 
         st.write("**Created:**", question.created_at[:10])
@@ -1069,8 +1056,6 @@ def show_recent_questions(db: InterviewDB, limit: int = 10):
                 st.markdown(f"**{q.question}**")
                 # Badges
                 badges = f"{q.get_display_type()} • {q.get_difficulty_emoji()} {q.difficulty.title()} • {q.category.title()}"
-                if q.companies:
-                    badges += f" • 🏢 {', '.join(q.companies[:2])}"
                 st.caption(badges)
 
             with col2:
@@ -1116,7 +1101,7 @@ def main():
     # Key Metrics Row
     st.header("📊 Your Prep Stats")
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         st.metric(
@@ -1133,13 +1118,6 @@ def main():
         )
 
     with col3:
-        st.metric(
-            "Companies",
-            stats['total_companies'],
-            help="Company research entries"
-        )
-
-    with col4:
         st.metric(
             "Practice Hours",
             f"{stats['total_practice_time_hours']:.1f}",
