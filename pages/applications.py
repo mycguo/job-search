@@ -163,6 +163,9 @@ def show_application_card(app: Application, db: JobSearchDB):
             # Generate cover letter button
             if app.job_description:
                 st.divider()
+                cover_letter_key_card = f'cover_letter_card_{app.id}'
+                current_cover_letter_card = app.cover_letter or st.session_state.get(cover_letter_key_card, "")
+                
                 if st.button("✍️ Generate Cover Letter", key=f"coverletter_{app.id}"):
                     with st.spinner("Generating cover letter..."):
                         try:
@@ -177,11 +180,31 @@ def show_application_card(app: Application, db: JobSearchDB):
                                 job_description=app.job_description
                             )
 
-                            st.text_area("Cover Letter:", value=cover_letter, height=300)
-                            st.success("✅ Cover letter generated! Copy and customize as needed.")
+                            st.session_state[cover_letter_key_card] = cover_letter
+                            current_cover_letter_card = cover_letter
+                            st.success("✅ Cover letter generated!")
+                            st.rerun()
                         except Exception as e:
                             st.error(f"Error: {str(e)}")
                             st.caption("Note: Requires valid Google API key")
+                
+                # Show cover letter if available
+                if current_cover_letter_card:
+                    edited_cover_letter_card = st.text_area(
+                        "Cover Letter:",
+                        value=current_cover_letter_card,
+                        height=300,
+                        key=f"cover_letter_text_card_{app.id}"
+                    )
+                    
+                    if st.button("💾 Save Cover Letter", key=f"save_cover_card_{app.id}", use_container_width=True):
+                        db.update_application(app.id, {'cover_letter': edited_cover_letter_card})
+                        st.session_state[cover_letter_key_card] = edited_cover_letter_card
+                        st.success("✅ Cover letter saved!")
+                        st.rerun()
+                    
+                    if app.cover_letter:
+                        st.caption("💾 Saved with this application")
 
             if app.notes:
                 st.write("**Notes:**")
@@ -441,16 +464,23 @@ def show_application_detail(db: JobSearchDB, app_id: str):
                 if reqs.get("role_level"):
                     st.write(f"**Level:** {reqs['role_level']}")
 
-        # Generate cover letter
+        # Generate and manage cover letter
         if app.job_description:
             st.divider()
+            st.subheader("Cover Letter")
+            
+            # Use saved cover letter if available, otherwise use session state or empty
+            cover_letter_key = f'cover_letter_{app.id}'
+            current_cover_letter = app.cover_letter or st.session_state.get(cover_letter_key, "")
+            
+            # Generate button
             if st.button("✍️ Generate Cover Letter", use_container_width=True):
                 with st.spinner("Generating cover letter..."):
                     try:
                         matcher = JobMatcher()
                         profile = get_default_user_profile()
 
-                        cover_letter = matcher.generate_cover_letter(
+                        generated_letter = matcher.generate_cover_letter(
                             company=app.company,
                             role=app.role,
                             job_requirements=app.job_requirements or {},
@@ -458,10 +488,39 @@ def show_application_detail(db: JobSearchDB, app_id: str):
                             job_description=app.job_description
                         )
 
-                        st.text_area("Cover Letter:", value=cover_letter, height=400)
+                        # Store in session state
+                        st.session_state[cover_letter_key] = generated_letter
                         st.success("✅ Cover letter generated!")
+                        st.rerun()
                     except Exception as e:
                         st.error(f"Error: {str(e)}")
+            
+            # Display and edit cover letter
+            if current_cover_letter:
+                edited_cover_letter = st.text_area(
+                    "Cover Letter:",
+                    value=current_cover_letter,
+                    height=400,
+                    key=f"cover_letter_text_{app.id}",
+                    help="Edit the cover letter as needed, then click Save to store it with this application."
+                )
+                
+                # Save button row
+                col1, col2 = st.columns([3, 1])
+                with col2:
+                    if st.button("💾 Save Cover Letter", type="primary", use_container_width=True, key=f"save_cover_{app.id}"):
+                        # Save to database
+                        db.update_application(app_id, {'cover_letter': edited_cover_letter})
+                        # Update session state
+                        st.session_state[cover_letter_key] = edited_cover_letter
+                        st.success("✅ Cover letter saved!")
+                        st.rerun()
+                
+                # Show saved indicator if cover letter is already saved
+                if app.cover_letter:
+                    st.caption("💾 Cover letter is saved with this application")
+            else:
+                st.info("💡 Click 'Generate Cover Letter' to create a personalized cover letter for this application.")
 
     with tab3:
         st.subheader("Application Timeline")

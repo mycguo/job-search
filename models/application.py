@@ -54,6 +54,7 @@ class Application:
     salary_range: Optional[str] = None
     match_score: Optional[float] = None
     notes: Optional[str] = None
+    cover_letter: Optional[str] = None  # Generated cover letter
     timeline: List[ApplicationEvent] = field(default_factory=list)
     job_requirements: Optional[Dict] = None  # Extracted requirements
     recruiter_contact: Optional[ContactLink] = None
