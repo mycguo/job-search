@@ -20,7 +20,7 @@ from models.interview_prep import InterviewQuestion
 def show_question_card(question: InterviewQuestion, db: InterviewDB):
     """Display a question as a card"""
     with st.container():
-        col1, col2, col3, col4 = st.columns([4, 2, 2, 1])
+        col1, col2, col3, col4, col5 = st.columns([4, 2, 2, 1, 1])
 
         with col1:
             st.markdown(f"**{question.question}**")
@@ -31,9 +31,6 @@ def show_question_card(question: InterviewQuestion, db: InterviewDB):
             badges.append(f"{question.get_difficulty_emoji()} {question.difficulty.title()}")
             badges.append(f"📁 {question.category.title()}")
 
-            if question.companies:
-                badges.append(f"🏢 {', '.join(question.companies[:2])}")
-
             st.caption(" • ".join(badges))
 
             # Tags
@@ -42,7 +39,7 @@ def show_question_card(question: InterviewQuestion, db: InterviewDB):
                 st.caption(f"🏷️ {tag_text}")
 
         with col2:
-            st.write(f"**Confidence:** {question.get_confidence_emoji()} {question.confidence_level}/5")
+            st.write(f"**Importance:** {question.get_importance_emoji()} {question.importance}/10")
             if question.practice_count > 0:
                 st.caption(f"✅ Practiced {question.practice_count}x")
             else:
@@ -61,45 +58,17 @@ def show_question_card(question: InterviewQuestion, db: InterviewDB):
                 st.caption("🕐 Never")
 
         with col4:
-            if st.button("View", key=f"view_{question.id}", use_container_width=True):
-                st.session_state['view_question_id'] = question.id
+            if st.button("🎓 Practice", key=f"practice_{question.id}", width="stretch"):
+                # Mark as practiced
+                question.mark_practiced()
+                db.update_question(question)
+                st.success("✅ Marked as practiced!")
                 st.rerun()
 
-        # Expandable quick actions
-        with st.expander("⚡ Quick Actions"):
-            col1, col2, col3 = st.columns(3)
-
-            with col1:
-                if st.button("🎓 Practice", key=f"practice_{question.id}", use_container_width=True):
-                    # Mark as practiced
-                    question.mark_practiced()
-                    db.update_question(question)
-                    st.success("✅ Marked as practiced!")
-                    st.rerun()
-
-            with col2:
-                # Confidence quick update
-                new_conf = st.selectbox(
-                    "Confidence",
-                    [1, 2, 3, 4, 5],
-                    index=question.confidence_level - 1,
-                    key=f"conf_{question.id}"
-                )
-                if new_conf != question.confidence_level:
-                    question.update_confidence(new_conf)
-                    db.update_question(question)
-                    st.success("✅ Updated!")
-                    st.rerun()
-
-            with col3:
-                if st.button("🗑️ Delete", key=f"delete_{question.id}", use_container_width=True):
-                    if st.session_state.get(f'confirm_delete_{question.id}'):
-                        db.delete_question(question.id)
-                        st.success("✅ Deleted!")
-                        st.rerun()
-                    else:
-                        st.session_state[f'confirm_delete_{question.id}'] = True
-                        st.warning("Click again to confirm")
+        with col5:
+            if st.button("View", key=f"view_{question.id}", width="stretch"):
+                st.session_state['view_question_id'] = question.id
+                st.rerun()
 
         st.divider()
 
@@ -175,14 +144,6 @@ def main():
             help="Filter by difficulty level"
         )
 
-        # Company filter
-        companies = ["All"] + get_unique_values(all_questions, 'companies')
-        filter_company = st.selectbox(
-            "Company",
-            companies,
-            help="Filter by company"
-        )
-
         # Confidence filter
         filter_confidence = st.selectbox(
             "Confidence Level",
@@ -227,7 +188,7 @@ def main():
         st.metric("Total Questions", stats['total_questions'])
         st.metric("Practiced", f"{stats['practice_percentage']:.0f}%")
 
-        if st.button("🔄 Clear Filters", use_container_width=True):
+        if st.button("🔄 Clear Filters", width="stretch"):
             st.rerun()
 
     # Main content area
@@ -266,10 +227,6 @@ def main():
     # Difficulty filter
     if filter_difficulty != "All":
         filtered_questions = [q for q in filtered_questions if q.difficulty == filter_difficulty]
-
-    # Company filter
-    if filter_company != "All":
-        filtered_questions = [q for q in filtered_questions if filter_company in q.companies]
 
     # Confidence filter
     if filter_confidence == "Low (1-2)":
@@ -338,10 +295,10 @@ def main():
 
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("➕ Add Question", type="primary", use_container_width=True):
+            if st.button("➕ Add Question", type="primary", width="stretch"):
                 st.switch_page("pages/interview_prep.py")
         with col2:
-            if st.button("🔄 Clear Filters", use_container_width=True):
+            if st.button("🔄 Clear Filters", width="stretch"):
                 st.rerun()
     else:
         # Display questions based on view mode
@@ -359,7 +316,7 @@ def main():
                     st.caption(badges)
 
                 with col2:
-                    st.caption(f"Confidence: {question.get_confidence_emoji()} {question.confidence_level}/5")
+                    st.caption(f"Importance: {question.get_importance_emoji()} {question.importance}/10")
 
                 with col3:
                     st.caption(f"Practiced: {question.practice_count}x")
@@ -377,19 +334,19 @@ def main():
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        if st.button("🏠 Home", use_container_width=True):
+        if st.button("🏠 Home", width="stretch"):
             st.switch_page("app.py")
 
     with col2:
-        if st.button("🎯 Interview Prep", use_container_width=True):
+        if st.button("🎯 Interview Prep", width="stretch"):
             st.switch_page("pages/interview_prep.py")
 
     with col3:
-        if st.button("📝 Applications", use_container_width=True):
+        if st.button("📝 Applications", width="stretch"):
             st.switch_page("pages/applications.py")
 
     with col4:
-        if st.button("➕ Add Question", use_container_width=True, type="primary"):
+        if st.button("➕ Add Question", width="stretch", type="primary"):
             st.switch_page("pages/interview_prep.py")
 
     # Logout button

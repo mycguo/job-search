@@ -829,19 +829,19 @@ def main():
     # Quick action buttons
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
-        if st.button("📊 Dashboard", use_container_width=True):
+        if st.button("📊 Dashboard", width="stretch"):
             st.switch_page("pages/dashboard.py")
     with col2:
-        if st.button("📅 Interviews", use_container_width=True):
+        if st.button("📅 Interviews", width="stretch"):
             st.switch_page("pages/interview_schedule.py")
     with col3:
-        if st.button("🎯 Interview Prep", use_container_width=True):
+        if st.button("🎯 Interview Prep", width="stretch"):
             st.switch_page("pages/interview_prep.py")
     with col4:
-        if st.button("📄 Resume", use_container_width=True):
+        if st.button("📄 Resume", width="stretch"):
             st.switch_page("pages/resume.py")
     with col5:
-        if st.button("📋 View All Apps", use_container_width=True):
+        if st.button("📋 View All Apps", width="stretch"):
             st.switch_page("pages/applications.py")
 
     st.divider()
@@ -887,7 +887,7 @@ def main():
 
     st.markdown("<div style='height:200px;'></div>", unsafe_allow_html=True)
     st.markdown("---")
-    st.button("Log out", on_click=logout, use_container_width=True)
+    st.button("Log out", on_click=logout, width="stretch")
 
 if __name__ == "__main__":
     main()

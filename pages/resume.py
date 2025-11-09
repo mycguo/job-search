@@ -568,7 +568,7 @@ def show_tailor_resume_form(db: ResumeDB):
                 file_name=pdf_filename,
                 mime="application/pdf",
                 type="primary",
-                use_container_width=True
+                width="stretch"
             )
             
             # Download as text button
@@ -577,13 +577,13 @@ def show_tailor_resume_form(db: ResumeDB):
                 data=tailored_text.encode('utf-8'),
                 file_name=f"{company_name.replace(' ', '_')}_Resume.txt",
                 mime="text/plain",
-                use_container_width=True
+                width="stretch"
             )
             
             st.info("💡 PDF format is recommended for job applications")
             
             # Clear button to reset and show form again
-            if st.button("🔄 Create Another Tailored Resume", use_container_width=True):
+            if st.button("🔄 Create Another Tailored Resume", width="stretch"):
                 del st.session_state['tailored_resume_data']
                 st.rerun()
 
@@ -879,12 +879,12 @@ def show_resume_detail(db: ResumeDB, resume_id: str):
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            if st.button("✏️ Edit Resume", use_container_width=True):
+            if st.button("✏️ Edit Resume", width="stretch"):
                 st.session_state['edit_mode'] = not st.session_state.get('edit_mode', False)
                 st.rerun()
 
         with col2:
-            if st.button("🎯 Tailor for Job", use_container_width=True):
+            if st.button("🎯 Tailor for Job", width="stretch"):
                 # Go back to main page and show tailor form
                 del st.session_state['view_resume_id']
                 st.session_state['show_tailor'] = True
@@ -892,7 +892,7 @@ def show_resume_detail(db: ResumeDB, resume_id: str):
 
         with col3:
             if not resume.is_active:
-                if st.button("✅ Set as Active", use_container_width=True):
+                if st.button("✅ Set as Active", width="stretch"):
                     db.set_active_resume(resume_id)
                     st.success("Resume set as active!")
                     st.rerun()
@@ -963,7 +963,7 @@ def show_resume_detail(db: ResumeDB, resume_id: str):
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    if st.button("💾 Save Changes", type="primary", use_container_width=True):
+                    if st.button("💾 Save Changes", type="primary", width="stretch"):
                         # Update resume
                         resume.name = new_name
                         resume.full_text = new_full_text
@@ -992,7 +992,7 @@ def show_resume_detail(db: ResumeDB, resume_id: str):
                         st.rerun()
 
                 with col2:
-                    if st.button("✕ Cancel", use_container_width=True):
+                    if st.button("✕ Cancel", width="stretch"):
                         st.session_state['edit_mode'] = False
                         st.rerun()
 
@@ -1087,15 +1087,15 @@ def main():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("📤 Upload Resume", use_container_width=True):
+        if st.button("📤 Upload Resume", width="stretch"):
             st.session_state['show_upload'] = True
 
     with col2:
-        if st.button("📋 View All Resumes", use_container_width=True):
+        if st.button("📋 View All Resumes", width="stretch"):
             st.session_state['show_upload'] = False
 
     with col3:
-        if st.button("🎯 Tailor Resume", use_container_width=True):
+        if st.button("🎯 Tailor Resume", width="stretch"):
             st.session_state['show_tailor'] = True
             st.session_state['show_upload'] = False
 
@@ -1131,15 +1131,15 @@ def main():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("🏠 Home", use_container_width=True):
+        if st.button("🏠 Home", width="stretch"):
             st.switch_page("app.py")
 
     with col2:
-        if st.button("📊 Dashboard", use_container_width=True):
+        if st.button("📊 Dashboard", width="stretch"):
             st.switch_page("pages/dashboard.py")
 
     with col3:
-        if st.button("📝 Applications", use_container_width=True):
+        if st.button("📝 Applications", width="stretch"):
             st.switch_page("pages/applications.py")
     
     # Logout button

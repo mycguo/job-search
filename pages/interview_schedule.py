@@ -268,7 +268,7 @@ def main():
                         st.caption(f"👤 {interview['interviewer']}")
                 
                 with col4:
-                    if st.button("View App", key=f"view_{interview_key}", use_container_width=True):
+                    if st.button("View App", key=f"view_{interview_key}", width="stretch"):
                         st.session_state['view_application_id'] = interview['application_id']
                         st.switch_page("pages/applications.py")
                 
@@ -332,7 +332,7 @@ def main():
                             col_btn1, col_btn2 = st.columns(2)
                             
                             with col_btn1:
-                                if st.button("💾 Save Changes", key=f"save_{interview_key}", use_container_width=True):
+                                if st.button("💾 Save Changes", key=f"save_{interview_key}", width="stretch"):
                                     # Format time and include in notes
                                     time_str = new_event_time.strftime("%I:%M %p")
                                     updated_notes = new_notes
@@ -357,7 +357,7 @@ def main():
                                         st.error("❌ Failed to update interview")
                             
                             with col_btn2:
-                                if st.button("🗑️ Delete", key=f"delete_{interview_key}", use_container_width=True):
+                                if st.button("🗑️ Delete", key=f"delete_{interview_key}", width="stretch"):
                                     if st.session_state.get(f'confirm_delete_{interview_key}'):
                                         success = db.delete_timeline_event(interview['application_id'], event_index)
                                         if success:
@@ -375,10 +375,10 @@ def main():
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("📝 Go to Applications", use_container_width=True):
+        if st.button("📝 Go to Applications", width="stretch"):
             st.switch_page("pages/applications.py")
     with col2:
-        if st.button("🎯 Go to Interview Prep", use_container_width=True):
+        if st.button("🎯 Go to Interview Prep", width="stretch"):
             st.switch_page("pages/interview_prep.py")
     
     # Logout button

@@ -7,6 +7,7 @@ Opens in a separate tab for easy side-by-side viewing.
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 import sys
 from datetime import datetime
 import pandas as pd
@@ -55,10 +56,10 @@ def main():
     with col1:
         st.title("📝 Quick Notes")
     with col2:
-        if st.button("🔄 Refresh", use_container_width=True):
+        if st.button("🔄 Refresh", width="stretch"):
             st.rerun()
     with col3:
-        if st.button("📥 Export CSV", use_container_width=True):
+        if st.button("📥 Export CSV", width="stretch"):
             st.session_state['show_export'] = not st.session_state.get('show_export', False)
 
     # Initialize database
@@ -182,12 +183,12 @@ def main():
                     note_edit_key = f"edit_note_{note_id}"
                     is_editing_note = st.session_state.get(note_edit_key, False)
 
-                    col1, col2, col3 = st.columns([1.5, 4.5, 0.5])
+                    col1, col2, col3, col4 = st.columns([1.5, 4, 0.5, 0.5])
 
                     with col1:
                         # Category label - show edit button only on first item
                         if idx == 0:
-                            if st.button(f"📌 {label}", key=f"cat_label_{label}", use_container_width=True, help="Click to edit category"):
+                            if st.button(f"📌 {label}", key=f"cat_label_{label}", width="stretch", help="Click to edit category"):
                                 st.session_state[category_key] = True
                                 st.rerun()
                         else:
@@ -220,7 +221,7 @@ def main():
 
                                 col_save, col_delete, col_add, col_cancel = st.columns(4)
                                 with col_save:
-                                    if st.form_submit_button("💾 Save", use_container_width=True):
+                                    if st.form_submit_button("💾 Save", width="stretch"):
                                         if edited_content.strip():
                                             db.update_quick_note(note_id, label, edited_content, note_type="text")
                                             # Add new row if provided
@@ -236,7 +237,7 @@ def main():
                                             st.error("Content cannot be empty")
 
                                 with col_delete:
-                                    if st.form_submit_button("🗑️ Delete", use_container_width=True):
+                                    if st.form_submit_button("🗑️ Delete", width="stretch"):
                                         db.delete_quick_note(note_id)
                                         st.session_state[note_edit_key] = False
                                         st.session_state[add_new_key] = False
@@ -244,28 +245,59 @@ def main():
                                         st.rerun()
 
                                 with col_add:
-                                    if st.form_submit_button("➕ Add", use_container_width=True):
+                                    if st.form_submit_button("➕ Add", width="stretch"):
                                         st.session_state[add_new_key] = True
                                         st.rerun()
 
                                 with col_cancel:
-                                    if st.form_submit_button("✕ Cancel", use_container_width=True):
+                                    if st.form_submit_button("✕ Cancel", width="stretch"):
                                         st.session_state[note_edit_key] = False
                                         st.session_state[add_new_key] = False
                                         st.rerun()
                         else:
-                            # Display mode - Copyable content
-                            st.text_input(
-                                "C",
-                                value=content,
-                                key=f"content_{note_id}",
-                                label_visibility="collapsed"
-                            )
+                            # Display mode - Show content
+                            st.markdown(f"`{content}`")
 
                     with col3:
                         if not is_editing_note:
+                            # Copy button - using simple button that copies on click
+                            import base64
+                            encoded_content = base64.b64encode(content.encode('utf-8')).decode('utf-8')
+                            func_name = f"copy_{note_id}"
+
+                            copy_html = f"""
+                            <button onclick="{func_name}()" style="
+                                width: 100%;
+                                padding: 0.25rem 0.5rem;
+                                background-color: #4CAF50;
+                                color: white;
+                                border: none;
+                                border-radius: 0.25rem;
+                                cursor: pointer;
+                                font-size: 0.875rem;
+                            ">📋</button>
+                            <script>
+                            function {func_name}() {{
+                                const text = atob('{encoded_content}');
+                                const textarea = document.createElement('textarea');
+                                textarea.value = text;
+                                textarea.style.position = 'fixed';
+                                textarea.style.opacity = '0';
+                                document.body.appendChild(textarea);
+                                textarea.select();
+                                document.execCommand('copy');
+                                document.body.removeChild(textarea);
+                            }}
+                            </script>
+                            """
+                            components.html(copy_html, height=35)
+                        else:
+                            st.write("")
+
+                    with col4:
+                        if not is_editing_note:
                             # Edit button
-                            if st.button("✏️", key=f"edit_btn_{note_id}", use_container_width=True, help="Edit"):
+                            if st.button("✏️", key=f"edit_btn_{note_id}", width="stretch", help="Edit"):
                                 st.session_state[note_edit_key] = True
                                 st.rerun()
                         else:
@@ -319,7 +351,7 @@ def main():
                     st.rerun()
 
             with col2:
-                submit = st.form_submit_button("💾 Save All", type="primary", use_container_width=True)
+                submit = st.form_submit_button("💾 Save All", type="primary", width="stretch")
 
             if submit:
                 if not new_label:
@@ -367,9 +399,9 @@ def main():
                 data=csv,
                 file_name="quick_notes.csv",
                 mime="text/csv",
-                use_container_width=True
+                width="stretch"
             )
-            if st.button("✕ Close", use_container_width=True):
+            if st.button("✕ Close", width="stretch"):
                 st.session_state['show_export'] = False
                 st.rerun()
 

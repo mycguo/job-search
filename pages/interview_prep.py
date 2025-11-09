@@ -597,7 +597,7 @@ def show_practice_mode(db: InterviewDB):
                 help="How to select questions"
             )
 
-        if st.button("🎯 Start Practice Session", type="primary", use_container_width=True):
+        if st.button("🎯 Start Practice Session", type="primary", width="stretch"):
             # Filter questions
             filtered_questions = all_questions
 
@@ -704,7 +704,7 @@ def show_practice_mode(db: InterviewDB):
 
         with col1:
             if st.button("👁️ Show Answer" if not st.session_state['show_answer'] else "🙈 Hide Answer",
-                        use_container_width=True):
+                        width="stretch"):
                 st.session_state['show_answer'] = not st.session_state['show_answer']
                 st.rerun()
 
@@ -758,7 +758,7 @@ def show_practice_mode(db: InterviewDB):
                 height=100
             )
 
-            if st.button("➡️ Next Question", type="primary", use_container_width=True):
+            if st.button("➡️ Next Question", type="primary", width="stretch"):
                 # Record performance
                 session.add_question(current_q.id, performance_rating, performance_notes)
 
@@ -900,7 +900,7 @@ def show_question_detail(db: InterviewDB, question_id: str):
             st.markdown("### Mark as Practiced")
             st.write(f"Current practice count: {question.practice_count}")
 
-            if st.button("✅ Mark as Practiced", use_container_width=True):
+            if st.button("✅ Mark as Practiced", width="stretch"):
                 question.mark_practiced()
                 db.update_question(question)
                 st.success("✅ Marked as practiced!")
@@ -988,7 +988,7 @@ def show_question_detail(db: InterviewDB, question_id: str):
                 help="Additional notes about this question"
             )
 
-            if st.button("💾 Update Answer", type="primary", use_container_width=True):
+            if st.button("💾 Update Answer", type="primary", width="stretch"):
                 # Update answer
                 question.answer_full = new_answer
 
@@ -1132,21 +1132,21 @@ def main():
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        if st.button("📄 Upload Document", use_container_width=True):
+        if st.button("📄 Upload Document", width="stretch"):
             st.session_state['show_upload_document'] = True
             st.session_state['show_add_question'] = False
 
     with col2:
-        if st.button("➕ Add Question", use_container_width=True):
+        if st.button("➕ Add Question", width="stretch"):
             st.session_state['show_add_question'] = True
             st.session_state['show_upload_document'] = False
 
     with col3:
-        if st.button("📝 View All Questions", use_container_width=True):
+        if st.button("📝 View All Questions", width="stretch"):
             st.switch_page("pages/questions.py")
 
     with col4:
-        if st.button("🎓 Practice Mode", use_container_width=True):
+        if st.button("🎓 Practice Mode", width="stretch"):
             st.session_state['show_practice_mode'] = True
             st.session_state['show_add_question'] = False
             st.session_state['show_upload_document'] = False
@@ -1224,15 +1224,15 @@ def main():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("🏠 Home", use_container_width=True):
+        if st.button("🏠 Home", width="stretch"):
             st.switch_page("app.py")
 
     with col2:
-        if st.button("📊 Dashboard", use_container_width=True):
+        if st.button("📊 Dashboard", width="stretch"):
             st.switch_page("pages/dashboard.py")
 
     with col3:
-        if st.button("📝 Applications", use_container_width=True):
+        if st.button("📝 Applications", width="stretch"):
             st.switch_page("pages/applications.py")
     
     # Logout button
