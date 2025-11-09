@@ -18,6 +18,7 @@ from storage.json_db import JobSearchDB
 from ai.job_matcher import JobMatcher, get_default_user_profile
 from storage.auth_utils import is_user_logged_in, login, logout
 from pages.resume import fetch_job_description_from_url
+from components.quick_notes import render_quick_notes
 
 
 def build_contact_link(name: str, url: str, email: str = None) -> Optional[ContactLink]:
@@ -783,6 +784,9 @@ def main():
             "Sort By",
             ["Applied Date (Newest)", "Applied Date (Oldest)", "Company (A-Z)", "Company (Z-A)"]
         )
+
+    # Render quick notes in sidebar (accessible from anywhere)
+    render_quick_notes()
 
     # Add new application
     st.header("➕ Add New Application")

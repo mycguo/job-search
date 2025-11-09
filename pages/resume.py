@@ -22,6 +22,7 @@ import docx
 from langchain_google_genai import ChatGoogleGenerativeAI
 import requests
 from bs4 import BeautifulSoup
+from components.quick_notes import render_quick_notes
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
@@ -1037,6 +1038,9 @@ def main():
 
     st.title("📄 Resume Management")
     st.markdown("Upload, view, and manage your resumes")
+
+    # Render quick notes in sidebar (accessible from anywhere)
+    render_quick_notes()
 
     # Initialize database
     db = ResumeDB()
