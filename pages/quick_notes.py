@@ -183,7 +183,7 @@ def main():
                     note_edit_key = f"edit_note_{note_id}"
                     is_editing_note = st.session_state.get(note_edit_key, False)
 
-                    col1, col2, col3, col4 = st.columns([1.5, 4, 0.5, 0.5])
+                    col1, col2, col3, col4 = st.columns([1.5, 4, 0.35, 0.35])
 
                     with col1:
                         # Category label - show edit button only on first item
@@ -256,41 +256,31 @@ def main():
                                         st.rerun()
                         else:
                             # Display mode - Show content
-                            st.markdown(f"`{content}`")
+                            st.write(content)
 
                     with col3:
                         if not is_editing_note:
-                            # Copy button - using simple button that copies on click
-                            import base64
-                            encoded_content = base64.b64encode(content.encode('utf-8')).decode('utf-8')
-                            func_name = f"copy_{note_id}"
-
-                            copy_html = f"""
-                            <button onclick="{func_name}()" style="
-                                width: 100%;
-                                padding: 0.25rem 0.5rem;
-                                background-color: #4CAF50;
-                                color: white;
-                                border: none;
-                                border-radius: 0.25rem;
-                                cursor: pointer;
-                                font-size: 0.875rem;
-                            ">📋</button>
-                            <script>
-                            function {func_name}() {{
-                                const text = atob('{encoded_content}');
-                                const textarea = document.createElement('textarea');
-                                textarea.value = text;
-                                textarea.style.position = 'fixed';
-                                textarea.style.opacity = '0';
-                                document.body.appendChild(textarea);
-                                textarea.select();
-                                document.execCommand('copy');
-                                document.body.removeChild(textarea);
-                            }}
-                            </script>
-                            """
-                            components.html(copy_html, height=35)
+                            # Copy button - use native Streamlit button with JavaScript copy
+                            if st.button("📋", key=f"copy_btn_{note_id}", width="stretch", help="Copy"):
+                                # Inject JavaScript to copy content
+                                import base64
+                                encoded_content = base64.b64encode(content.encode('utf-8')).decode('utf-8')
+                                copy_script = f"""
+                                <script>
+                                (function() {{
+                                    const text = atob('{encoded_content}');
+                                    const textarea = document.createElement('textarea');
+                                    textarea.value = text;
+                                    textarea.style.position = 'fixed';
+                                    textarea.style.opacity = '0';
+                                    document.body.appendChild(textarea);
+                                    textarea.select();
+                                    document.execCommand('copy');
+                                    document.body.removeChild(textarea);
+                                }})();
+                                </script>
+                                """
+                                st.markdown(copy_script, unsafe_allow_html=True)
                         else:
                             st.write("")
 
