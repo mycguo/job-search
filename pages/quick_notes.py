@@ -178,31 +178,99 @@ def main():
                     note_id = note['id']
                     content = note['content']
 
+                    # Check if this individual note is being edited
+                    note_edit_key = f"edit_note_{note_id}"
+                    is_editing_note = st.session_state.get(note_edit_key, False)
+
                     col1, col2, col3 = st.columns([1.5, 4.5, 0.5])
 
                     with col1:
                         # Category label - show edit button only on first item
                         if idx == 0:
-                            if st.button(f"📌 {label}", key=f"cat_label_{label}", use_container_width=True, help="Click to edit"):
+                            if st.button(f"📌 {label}", key=f"cat_label_{label}", use_container_width=True, help="Click to edit category"):
                                 st.session_state[category_key] = True
                                 st.rerun()
                         else:
-                            st.markdown(f"**📌 {label}**")
+                            # Empty space for subsequent items to align with first item
+                            st.write("")
 
                     with col2:
-                        # Copyable content
-                        st.text_input(
-                            "C",
-                            value=content,
-                            key=f"content_{note_id}",
-                            label_visibility="collapsed"
-                        )
+                        if is_editing_note:
+                            # Edit mode for individual entry
+                            with st.form(f"edit_note_form_{note_id}"):
+                                edited_content = st.text_input(
+                                    "Edit content",
+                                    value=content,
+                                    key=f"edit_content_{note_id}",
+                                    label_visibility="collapsed"
+                                )
+
+                                # Option to add new row
+                                add_new_key = f"add_new_{note_id}"
+                                if add_new_key not in st.session_state:
+                                    st.session_state[add_new_key] = False
+
+                                if st.session_state[add_new_key]:
+                                    new_content = st.text_input(
+                                        "New entry",
+                                        placeholder="Enter new content...",
+                                        key=f"new_entry_{note_id}",
+                                        label_visibility="collapsed"
+                                    )
+
+                                col_save, col_delete, col_add, col_cancel = st.columns(4)
+                                with col_save:
+                                    if st.form_submit_button("💾 Save", use_container_width=True):
+                                        if edited_content.strip():
+                                            db.update_quick_note(note_id, label, edited_content, note_type="text")
+                                            # Add new row if provided
+                                            if st.session_state[add_new_key] and f"new_entry_{note_id}" in locals():
+                                                new_val = st.session_state.get(f"new_entry_{note_id}", "")
+                                                if new_val.strip():
+                                                    db.add_quick_note(label, new_val, note_type="text")
+                                            st.session_state[note_edit_key] = False
+                                            st.session_state[add_new_key] = False
+                                            st.success("✅ Updated!")
+                                            st.rerun()
+                                        else:
+                                            st.error("Content cannot be empty")
+
+                                with col_delete:
+                                    if st.form_submit_button("🗑️ Delete", use_container_width=True):
+                                        db.delete_quick_note(note_id)
+                                        st.session_state[note_edit_key] = False
+                                        st.session_state[add_new_key] = False
+                                        st.success("✅ Deleted!")
+                                        st.rerun()
+
+                                with col_add:
+                                    if st.form_submit_button("➕ Add", use_container_width=True):
+                                        st.session_state[add_new_key] = True
+                                        st.rerun()
+
+                                with col_cancel:
+                                    if st.form_submit_button("✕ Cancel", use_container_width=True):
+                                        st.session_state[note_edit_key] = False
+                                        st.session_state[add_new_key] = False
+                                        st.rerun()
+                        else:
+                            # Display mode - Copyable content
+                            st.text_input(
+                                "C",
+                                value=content,
+                                key=f"content_{note_id}",
+                                label_visibility="collapsed"
+                            )
 
                     with col3:
-                        # Quick delete button
-                        if st.button("🗑️", key=f"delete_btn_{note_id}", use_container_width=True):
-                            db.delete_quick_note(note_id)
-                            st.rerun()
+                        if not is_editing_note:
+                            # Edit button
+                            if st.button("✏️", key=f"edit_btn_{note_id}", use_container_width=True, help="Edit"):
+                                st.session_state[note_edit_key] = True
+                                st.rerun()
+                        else:
+                            # Empty space when editing
+                            st.write("")
 
     # Compact add form in expander with multiple content rows - MOVED TO BOTTOM
     st.markdown("---")
