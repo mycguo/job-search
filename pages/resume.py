@@ -31,12 +31,12 @@ from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
 def generate_pdf_from_text(text: str, filename: str = "resume.pdf") -> bytes:
     """
-    Generate a PDF from text content.
-    
+    Generate a PDF from text content, preserving newlines.
+
     Args:
         text: The resume text content
         filename: Output filename (optional)
-    
+
     Returns:
         PDF bytes
     """
@@ -44,13 +44,13 @@ def generate_pdf_from_text(text: str, filename: str = "resume.pdf") -> bytes:
     doc = SimpleDocTemplate(buffer, pagesize=letter,
                            rightMargin=0.75*inch, leftMargin=0.75*inch,
                            topMargin=0.75*inch, bottomMargin=0.75*inch)
-    
+
     # Container for the 'Flowable' objects
     elements = []
-    
+
     # Define styles
     styles = getSampleStyleSheet()
-    
+
     # Custom styles
     title_style = ParagraphStyle(
         'CustomTitle',
@@ -60,70 +60,82 @@ def generate_pdf_from_text(text: str, filename: str = "resume.pdf") -> bytes:
         spaceAfter=12,
         alignment=TA_LEFT
     )
-    
+
     heading_style = ParagraphStyle(
         'CustomHeading',
         parent=styles['Heading2'],
         fontSize=12,
         textColor='black',
-        spaceAfter=6,
+        spaceAfter=4,
         spaceBefore=12,
         alignment=TA_LEFT,
         fontName='Helvetica-Bold'
     )
-    
+
     normal_style = ParagraphStyle(
         'CustomNormal',
         parent=styles['Normal'],
         fontSize=10,
         textColor='black',
-        spaceAfter=6,
+        spaceAfter=3,
         alignment=TA_LEFT,
-        leading=12
+        leading=14
     )
-    
-    # Parse text into paragraphs and format
+
+    bullet_style = ParagraphStyle(
+        'CustomBullet',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor='black',
+        spaceAfter=3,
+        alignment=TA_LEFT,
+        leading=14,
+        leftIndent=20,
+        firstLineIndent=-10
+    )
+
+    # Parse text line by line, preserving the structure
     lines = text.split('\n')
-    current_section = []
-    
+
     for line in lines:
-        line = line.strip()
-        if not line:
-            if current_section:
-                # Add accumulated content
-                para_text = ' '.join(current_section)
-                elements.append(Paragraph(para_text, normal_style))
-                elements.append(Spacer(1, 6))
-                current_section = []
+        line_stripped = line.strip()
+
+        # Skip completely empty lines but add small spacer
+        if not line_stripped:
+            elements.append(Spacer(1, 4))
             continue
-        
-        # Check if this looks like a heading (all caps, short line, or ends with colon)
+
+        # Check if this looks like a heading
         is_heading = (
-            len(line) < 50 and 
-            (line.isupper() or line.endswith(':') or 
-             any(keyword in line.lower() for keyword in ['experience', 'education', 'skills', 'summary', 'objective', 'projects', 'certifications']))
+            len(line_stripped) < 60 and
+            (line_stripped.isupper() or
+             line_stripped.endswith(':') or
+             any(keyword in line_stripped.lower() for keyword in [
+                 'experience', 'education', 'skills', 'summary', 'objective',
+                 'projects', 'certifications', 'professional experience',
+                 'work experience', 'technical skills', 'contact'
+             ]))
         )
-        
-        if is_heading and current_section:
-            # Flush current section
-            para_text = ' '.join(current_section)
-            elements.append(Paragraph(para_text, normal_style))
-            elements.append(Spacer(1, 6))
-            current_section = []
-            # Add heading
-            elements.append(Paragraph(line, heading_style))
-        elif is_heading:
-            # Just add heading
-            elements.append(Paragraph(line, heading_style))
+
+        # Check if it's a bullet point
+        is_bullet = line_stripped.startswith('•') or line_stripped.startswith('-') or line_stripped.startswith('*')
+
+        # Escape special characters for ReportLab
+        line_escaped = line_stripped.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+        if is_heading:
+            # Add as heading
+            elements.append(Paragraph(line_escaped, heading_style))
+        elif is_bullet:
+            # Add as bullet point with proper indentation
+            # Remove the bullet character and add it back in the style
+            bullet_text = line_stripped.lstrip('•-* ').strip()
+            bullet_text_escaped = bullet_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            elements.append(Paragraph(f"• {bullet_text_escaped}", bullet_style))
         else:
-            # Add to current section
-            current_section.append(line)
-    
-    # Add any remaining content
-    if current_section:
-        para_text = ' '.join(current_section)
-        elements.append(Paragraph(para_text, normal_style))
-    
+            # Add as normal paragraph
+            elements.append(Paragraph(line_escaped, normal_style))
+
     # Build PDF
     doc.build(elements)
     buffer.seek(0)
