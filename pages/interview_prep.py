@@ -883,8 +883,6 @@ def show_question_detail(db: InterviewDB, question_id: str):
         st.write("**Updated:**", question.updated_at[:10])
 
     with tab3:
-        st.subheader("Question Actions")
-
         col1, col2 = st.columns(2)
 
         with col1:
@@ -918,7 +916,34 @@ def show_question_detail(db: InterviewDB, question_id: str):
         # Update Answer Section
         st.markdown("### ✏️ Update Answer")
 
-        with st.expander("Edit Answer", expanded=False):
+        # Control form visibility - automatically expand when section is active
+        # Collapses after update
+        edit_answer_key = f'edit_answer_expanded_{question.id}'
+        collapse_flag_key = f'just_collapsed_answer_{question.id}'
+        
+        # Check if we just collapsed (from Update Answer)
+        just_collapsed = st.session_state.get(collapse_flag_key, False)
+        
+        # If we just collapsed, keep it collapsed for this render
+        # The flag will be cleared when user interacts with any widget in the section
+        if just_collapsed:
+            st.session_state[edit_answer_key] = False
+        else:
+            # Section is active and we didn't just collapse, so show the form
+            st.session_state[edit_answer_key] = True
+        
+        # Read directly from session state (should be set above)
+        edit_answer_expanded = st.session_state.get(edit_answer_key, True)
+        
+        # If collapsed, show a button to expand
+        if not edit_answer_expanded:
+            if st.button("✏️ Edit Answer", type="primary", key=f"expand_edit_answer_{question.id}"):
+                st.session_state[edit_answer_key] = True
+                st.session_state[collapse_flag_key] = False
+                st.rerun()
+        
+        # Render the form
+        if edit_answer_expanded:
             new_answer = st.text_area(
                 "Answer",
                 value=question.answer_full,
@@ -989,6 +1014,11 @@ def show_question_detail(db: InterviewDB, question_id: str):
 
                 # Save to database
                 db.update_question(question)
+                
+                # Collapse the form and set flag to prevent immediate re-expansion
+                st.session_state[edit_answer_key] = False
+                st.session_state[collapse_flag_key] = True
+                
                 st.success("✅ Answer updated successfully!")
                 st.rerun()
 
