@@ -32,6 +32,7 @@ class InterviewQuestion:
     last_practiced: Optional[str] = None
     practice_count: int = 0
     confidence_level: int = 3  # 1-5 scale
+    importance: int = 5  # 1-10 scale
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
     updated_at: str = field(default_factory=lambda: datetime.now().isoformat())
 
@@ -42,6 +43,9 @@ class InterviewQuestion:
     @staticmethod
     def from_dict(data: dict) -> 'InterviewQuestion':
         """Create from dictionary"""
+        # Set default importance for existing questions
+        if 'importance' not in data:
+            data['importance'] = 5
         return InterviewQuestion(**data)
 
     def get_display_type(self) -> str:
@@ -82,6 +86,20 @@ class InterviewQuestion:
         """Update confidence level (1-5)"""
         self.confidence_level = max(1, min(5, level))
         self.updated_at = datetime.now().isoformat()
+
+    def update_importance(self, level: int):
+        """Update importance level (1-10)"""
+        self.importance = max(1, min(10, level))
+        self.updated_at = datetime.now().isoformat()
+
+    def get_importance_emoji(self) -> str:
+        """Get emoji for importance level"""
+        if self.importance >= 8:
+            return '🔥'
+        elif self.importance >= 5:
+            return '⭐'
+        else:
+            return '💡'
 
 
 @dataclass
@@ -228,7 +246,8 @@ def create_interview_question(
     notes: str = "",
     tags: Optional[List[str]] = None,
     companies: Optional[List[str]] = None,
-    confidence_level: int = 3
+    confidence_level: int = 3,
+    importance: int = 5
 ) -> InterviewQuestion:
     """
     Create a new interview question.
@@ -244,6 +263,7 @@ def create_interview_question(
         tags: List of tags for categorization
         companies: Companies that ask this question
         confidence_level: 1-5 confidence in your answer
+        importance: 1-10 importance level
 
     Returns:
         InterviewQuestion instance
@@ -258,7 +278,8 @@ def create_interview_question(
         notes=notes,
         tags=tags or [],
         companies=companies or [],
-        confidence_level=confidence_level
+        confidence_level=confidence_level,
+        importance=importance
     )
 
 

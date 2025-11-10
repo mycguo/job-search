@@ -597,7 +597,7 @@ def show_practice_mode(db: InterviewDB):
                 help="How to select questions"
             )
 
-        if st.button("🎯 Start Practice Session", type="primary", use_container_width=True):
+        if st.button("🎯 Start Practice Session", type="primary", width="stretch"):
             # Filter questions
             filtered_questions = all_questions
 
@@ -704,7 +704,7 @@ def show_practice_mode(db: InterviewDB):
 
         with col1:
             if st.button("👁️ Show Answer" if not st.session_state['show_answer'] else "🙈 Hide Answer",
-                        use_container_width=True):
+                        width="stretch"):
                 st.session_state['show_answer'] = not st.session_state['show_answer']
                 st.rerun()
 
@@ -758,7 +758,7 @@ def show_practice_mode(db: InterviewDB):
                 height=100
             )
 
-            if st.button("➡️ Next Question", type="primary", use_container_width=True):
+            if st.button("➡️ Next Question", type="primary", width="stretch"):
                 # Record performance
                 session.add_question(current_q.id, performance_rating, performance_notes)
 
@@ -773,6 +773,195 @@ def show_practice_mode(db: InterviewDB):
                 st.rerun()
 
 
+def show_question_edit_form(db: InterviewDB, question, question_id: str, edit_mode_key: str):
+    """Show comprehensive edit form for all question fields"""
+    st.markdown("### ✏️ Edit Question")
+
+    with st.form("edit_question_form"):
+        # Question Text
+        st.markdown("**Question**")
+        question_text = st.text_area(
+            "Question",
+            value=question.question,
+            height=100,
+            label_visibility="collapsed",
+            help="The interview question"
+        )
+
+        # Type, Category, Difficulty in columns
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            question_type = st.selectbox(
+                "Type",
+                ["behavioral", "technical", "system-design", "case-study"],
+                index=["behavioral", "technical", "system-design", "case-study"].index(question.type)
+            )
+
+        with col2:
+            category = st.text_input(
+                "Category",
+                value=question.category,
+                placeholder="e.g., leadership, algorithms"
+            )
+
+        with col3:
+            difficulty = st.selectbox(
+                "Difficulty",
+                ["easy", "medium", "hard"],
+                index=["easy", "medium", "hard"].index(question.difficulty)
+            )
+
+        # Importance and Confidence
+        col1, col2 = st.columns(2)
+
+        with col1:
+            importance = st.slider(
+                "Importance",
+                min_value=1,
+                max_value=10,
+                value=question.importance,
+                help="How important is this question? (1-10)"
+            )
+
+        with col2:
+            confidence_level = st.slider(
+                "Confidence Level",
+                min_value=1,
+                max_value=5,
+                value=question.confidence_level,
+                help="How confident are you with this answer? (1-5)"
+            )
+
+        # Tags and Companies
+        col1, col2 = st.columns(2)
+
+        with col1:
+            tags_input = st.text_input(
+                "Tags (comma-separated)",
+                value=", ".join(question.tags) if question.tags else "",
+                placeholder="e.g., leadership, teamwork"
+            )
+
+        with col2:
+            companies_input = st.text_input(
+                "Companies (comma-separated)",
+                value=", ".join(question.companies) if question.companies else "",
+                placeholder="e.g., Google, Amazon"
+            )
+
+        st.divider()
+
+        # Answer
+        st.markdown("**Answer**")
+        answer_full = st.text_area(
+            "Answer",
+            value=question.answer_full,
+            height=200,
+            label_visibility="collapsed",
+            help="Your complete answer to this question"
+        )
+
+        # STAR Format
+        st.markdown("**STAR Format (Optional)**")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            star_situation = st.text_area(
+                "Situation",
+                value=question.answer_star.get('situation', '') if question.answer_star else '',
+                height=80
+            )
+
+            star_task = st.text_area(
+                "Task",
+                value=question.answer_star.get('task', '') if question.answer_star else '',
+                height=80
+            )
+
+        with col2:
+            star_action = st.text_area(
+                "Action",
+                value=question.answer_star.get('action', '') if question.answer_star else '',
+                height=80
+            )
+
+            star_result = st.text_area(
+                "Result",
+                value=question.answer_star.get('result', '') if question.answer_star else '',
+                height=80
+            )
+
+        # Notes
+        st.markdown("**Notes**")
+        notes = st.text_area(
+            "Notes",
+            value=question.notes,
+            height=100,
+            label_visibility="collapsed",
+            help="Additional notes about this question"
+        )
+
+        # Submit buttons
+        col1, col2 = st.columns([1, 4])
+
+        with col1:
+            save = st.form_submit_button("💾 Save", type="primary", width="stretch")
+
+        with col2:
+            cancel = st.form_submit_button("✕ Cancel", width="stretch")
+
+        if cancel:
+            st.session_state[edit_mode_key] = False
+            st.rerun()
+
+        if save:
+            if not question_text or not question_text.strip():
+                st.error("Question text cannot be empty")
+            elif not category or not category.strip():
+                st.error("Category cannot be empty")
+            else:
+                # Parse tags and companies
+                tags = [t.strip() for t in tags_input.split(",") if t.strip()]
+                companies = [c.strip() for c in companies_input.split(",") if c.strip()]
+
+                # Update question object
+                question.question = question_text.strip()
+                question.type = question_type
+                question.category = category.strip()
+                question.difficulty = difficulty
+                question.importance = importance
+                question.confidence_level = confidence_level
+                question.tags = tags
+                question.companies = companies
+                question.answer_full = answer_full
+                question.notes = notes
+
+                # Update STAR format if any field is filled
+                if star_situation or star_task or star_action or star_result:
+                    question.answer_star = {
+                        'situation': star_situation,
+                        'task': star_task,
+                        'action': star_action,
+                        'result': star_result
+                    }
+                else:
+                    question.answer_star = None
+
+                # Update timestamp
+                question.updated_at = datetime.now().isoformat()
+
+                # Save to database
+                db.update_question(question)
+
+                # Exit edit mode
+                st.session_state[edit_mode_key] = False
+
+                st.success("✅ Question updated successfully!")
+                st.rerun()
+
+
 def show_question_detail(db: InterviewDB, question_id: str):
     """Show detailed view of a single question"""
     question = db.get_question(question_id)
@@ -781,16 +970,32 @@ def show_question_detail(db: InterviewDB, question_id: str):
         st.error("Question not found!")
         return
 
-    # Header with back button
-    col1, col2 = st.columns([4, 1])
+    # Check if in edit mode
+    edit_mode_key = f'edit_question_detail_{question_id}'
+    is_editing = st.session_state.get(edit_mode_key, False)
+
+    # Header with back and edit buttons
+    col1, col2, col3 = st.columns([3, 1, 1])
 
     with col1:
         st.title(f"{question.get_display_type()} Question")
 
     with col2:
-        if st.button("← Back to List"):
+        if not is_editing and st.button("✏️ Edit", width="stretch"):
+            st.session_state[edit_mode_key] = True
+            st.rerun()
+
+    with col3:
+        if st.button("← Back", width="stretch"):
+            if is_editing:
+                st.session_state[edit_mode_key] = False
             del st.session_state['view_question_id']
             st.rerun()
+
+    # Show edit form if in edit mode
+    if is_editing:
+        show_question_edit_form(db, question, question_id, edit_mode_key)
+        return
 
     st.divider()
 
@@ -900,7 +1105,7 @@ def show_question_detail(db: InterviewDB, question_id: str):
             st.markdown("### Mark as Practiced")
             st.write(f"Current practice count: {question.practice_count}")
 
-            if st.button("✅ Mark as Practiced", use_container_width=True):
+            if st.button("✅ Mark as Practiced", width="stretch"):
                 question.mark_practiced()
                 db.update_question(question)
                 st.success("✅ Marked as practiced!")
@@ -988,7 +1193,7 @@ def show_question_detail(db: InterviewDB, question_id: str):
                 help="Additional notes about this question"
             )
 
-            if st.button("💾 Update Answer", type="primary", use_container_width=True):
+            if st.button("💾 Update Answer", type="primary", width="stretch"):
                 # Update answer
                 question.answer_full = new_answer
 
@@ -1132,21 +1337,21 @@ def main():
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        if st.button("📄 Upload Document", use_container_width=True):
+        if st.button("📄 Upload Document", width="stretch"):
             st.session_state['show_upload_document'] = True
             st.session_state['show_add_question'] = False
 
     with col2:
-        if st.button("➕ Add Question", use_container_width=True):
+        if st.button("➕ Add Question", width="stretch"):
             st.session_state['show_add_question'] = True
             st.session_state['show_upload_document'] = False
 
     with col3:
-        if st.button("📝 View All Questions", use_container_width=True):
+        if st.button("📝 View All Questions", width="stretch"):
             st.switch_page("pages/questions.py")
 
     with col4:
-        if st.button("🎓 Practice Mode", use_container_width=True):
+        if st.button("🎓 Practice Mode", width="stretch"):
             st.session_state['show_practice_mode'] = True
             st.session_state['show_add_question'] = False
             st.session_state['show_upload_document'] = False
@@ -1224,15 +1429,15 @@ def main():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("🏠 Home", use_container_width=True):
+        if st.button("🏠 Home", width="stretch"):
             st.switch_page("app.py")
 
     with col2:
-        if st.button("📊 Dashboard", use_container_width=True):
+        if st.button("📊 Dashboard", width="stretch"):
             st.switch_page("pages/dashboard.py")
 
     with col3:
-        if st.button("📝 Applications", use_container_width=True):
+        if st.button("📝 Applications", width="stretch"):
             st.switch_page("pages/applications.py")
     
     # Logout button

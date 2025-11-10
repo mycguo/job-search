@@ -22,6 +22,7 @@ import docx
 from langchain_google_genai import ChatGoogleGenerativeAI
 import requests
 from bs4 import BeautifulSoup
+from components.quick_notes import render_quick_notes
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
@@ -31,12 +32,12 @@ from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
 def generate_pdf_from_text(text: str, filename: str = "resume.pdf") -> bytes:
     """
-    Generate a PDF from text content.
-    
+    Generate a PDF from text content, preserving newlines.
+
     Args:
         text: The resume text content
         filename: Output filename (optional)
-    
+
     Returns:
         PDF bytes
     """
@@ -44,13 +45,13 @@ def generate_pdf_from_text(text: str, filename: str = "resume.pdf") -> bytes:
     doc = SimpleDocTemplate(buffer, pagesize=letter,
                            rightMargin=0.75*inch, leftMargin=0.75*inch,
                            topMargin=0.75*inch, bottomMargin=0.75*inch)
-    
+
     # Container for the 'Flowable' objects
     elements = []
-    
+
     # Define styles
     styles = getSampleStyleSheet()
-    
+
     # Custom styles
     title_style = ParagraphStyle(
         'CustomTitle',
@@ -60,70 +61,82 @@ def generate_pdf_from_text(text: str, filename: str = "resume.pdf") -> bytes:
         spaceAfter=12,
         alignment=TA_LEFT
     )
-    
+
     heading_style = ParagraphStyle(
         'CustomHeading',
         parent=styles['Heading2'],
         fontSize=12,
         textColor='black',
-        spaceAfter=6,
+        spaceAfter=4,
         spaceBefore=12,
         alignment=TA_LEFT,
         fontName='Helvetica-Bold'
     )
-    
+
     normal_style = ParagraphStyle(
         'CustomNormal',
         parent=styles['Normal'],
         fontSize=10,
         textColor='black',
-        spaceAfter=6,
+        spaceAfter=3,
         alignment=TA_LEFT,
-        leading=12
+        leading=14
     )
-    
-    # Parse text into paragraphs and format
+
+    bullet_style = ParagraphStyle(
+        'CustomBullet',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor='black',
+        spaceAfter=3,
+        alignment=TA_LEFT,
+        leading=14,
+        leftIndent=20,
+        firstLineIndent=-10
+    )
+
+    # Parse text line by line, preserving the structure
     lines = text.split('\n')
-    current_section = []
-    
+
     for line in lines:
-        line = line.strip()
-        if not line:
-            if current_section:
-                # Add accumulated content
-                para_text = ' '.join(current_section)
-                elements.append(Paragraph(para_text, normal_style))
-                elements.append(Spacer(1, 6))
-                current_section = []
+        line_stripped = line.strip()
+
+        # Skip completely empty lines but add small spacer
+        if not line_stripped:
+            elements.append(Spacer(1, 4))
             continue
-        
-        # Check if this looks like a heading (all caps, short line, or ends with colon)
+
+        # Check if this looks like a heading
         is_heading = (
-            len(line) < 50 and 
-            (line.isupper() or line.endswith(':') or 
-             any(keyword in line.lower() for keyword in ['experience', 'education', 'skills', 'summary', 'objective', 'projects', 'certifications']))
+            len(line_stripped) < 60 and
+            (line_stripped.isupper() or
+             line_stripped.endswith(':') or
+             any(keyword in line_stripped.lower() for keyword in [
+                 'experience', 'education', 'skills', 'summary', 'objective',
+                 'projects', 'certifications', 'professional experience',
+                 'work experience', 'technical skills', 'contact'
+             ]))
         )
-        
-        if is_heading and current_section:
-            # Flush current section
-            para_text = ' '.join(current_section)
-            elements.append(Paragraph(para_text, normal_style))
-            elements.append(Spacer(1, 6))
-            current_section = []
-            # Add heading
-            elements.append(Paragraph(line, heading_style))
-        elif is_heading:
-            # Just add heading
-            elements.append(Paragraph(line, heading_style))
+
+        # Check if it's a bullet point
+        is_bullet = line_stripped.startswith('•') or line_stripped.startswith('-') or line_stripped.startswith('*')
+
+        # Escape special characters for ReportLab
+        line_escaped = line_stripped.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+        if is_heading:
+            # Add as heading
+            elements.append(Paragraph(line_escaped, heading_style))
+        elif is_bullet:
+            # Add as bullet point with proper indentation
+            # Remove the bullet character and add it back in the style
+            bullet_text = line_stripped.lstrip('•-* ').strip()
+            bullet_text_escaped = bullet_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            elements.append(Paragraph(f"• {bullet_text_escaped}", bullet_style))
         else:
-            # Add to current section
-            current_section.append(line)
-    
-    # Add any remaining content
-    if current_section:
-        para_text = ' '.join(current_section)
-        elements.append(Paragraph(para_text, normal_style))
-    
+            # Add as normal paragraph
+            elements.append(Paragraph(line_escaped, normal_style))
+
     # Build PDF
     doc.build(elements)
     buffer.seek(0)
@@ -555,7 +568,7 @@ def show_tailor_resume_form(db: ResumeDB):
                 file_name=pdf_filename,
                 mime="application/pdf",
                 type="primary",
-                use_container_width=True
+                width="stretch"
             )
             
             # Download as text button
@@ -564,13 +577,13 @@ def show_tailor_resume_form(db: ResumeDB):
                 data=tailored_text.encode('utf-8'),
                 file_name=f"{company_name.replace(' ', '_')}_Resume.txt",
                 mime="text/plain",
-                use_container_width=True
+                width="stretch"
             )
             
             st.info("💡 PDF format is recommended for job applications")
             
             # Clear button to reset and show form again
-            if st.button("🔄 Create Another Tailored Resume", use_container_width=True):
+            if st.button("🔄 Create Another Tailored Resume", width="stretch"):
                 del st.session_state['tailored_resume_data']
                 st.rerun()
 
@@ -866,12 +879,12 @@ def show_resume_detail(db: ResumeDB, resume_id: str):
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            if st.button("✏️ Edit Resume", use_container_width=True):
+            if st.button("✏️ Edit Resume", width="stretch"):
                 st.session_state['edit_mode'] = not st.session_state.get('edit_mode', False)
                 st.rerun()
 
         with col2:
-            if st.button("🎯 Tailor for Job", use_container_width=True):
+            if st.button("🎯 Tailor for Job", width="stretch"):
                 # Go back to main page and show tailor form
                 del st.session_state['view_resume_id']
                 st.session_state['show_tailor'] = True
@@ -879,7 +892,7 @@ def show_resume_detail(db: ResumeDB, resume_id: str):
 
         with col3:
             if not resume.is_active:
-                if st.button("✅ Set as Active", use_container_width=True):
+                if st.button("✅ Set as Active", width="stretch"):
                     db.set_active_resume(resume_id)
                     st.success("Resume set as active!")
                     st.rerun()
@@ -950,7 +963,7 @@ def show_resume_detail(db: ResumeDB, resume_id: str):
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    if st.button("💾 Save Changes", type="primary", use_container_width=True):
+                    if st.button("💾 Save Changes", type="primary", width="stretch"):
                         # Update resume
                         resume.name = new_name
                         resume.full_text = new_full_text
@@ -979,7 +992,7 @@ def show_resume_detail(db: ResumeDB, resume_id: str):
                         st.rerun()
 
                 with col2:
-                    if st.button("✕ Cancel", use_container_width=True):
+                    if st.button("✕ Cancel", width="stretch"):
                         st.session_state['edit_mode'] = False
                         st.rerun()
 
@@ -1026,6 +1039,9 @@ def main():
     st.title("📄 Resume Management")
     st.markdown("Upload, view, and manage your resumes")
 
+    # Render quick notes in sidebar (accessible from anywhere)
+    render_quick_notes()
+
     # Initialize database
     db = ResumeDB()
 
@@ -1071,15 +1087,15 @@ def main():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("📤 Upload Resume", use_container_width=True):
+        if st.button("📤 Upload Resume", width="stretch"):
             st.session_state['show_upload'] = True
 
     with col2:
-        if st.button("📋 View All Resumes", use_container_width=True):
+        if st.button("📋 View All Resumes", width="stretch"):
             st.session_state['show_upload'] = False
 
     with col3:
-        if st.button("🎯 Tailor Resume", use_container_width=True):
+        if st.button("🎯 Tailor Resume", width="stretch"):
             st.session_state['show_tailor'] = True
             st.session_state['show_upload'] = False
 
@@ -1115,15 +1131,15 @@ def main():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("🏠 Home", use_container_width=True):
+        if st.button("🏠 Home", width="stretch"):
             st.switch_page("app.py")
 
     with col2:
-        if st.button("📊 Dashboard", use_container_width=True):
+        if st.button("📊 Dashboard", width="stretch"):
             st.switch_page("pages/dashboard.py")
 
     with col3:
-        if st.button("📝 Applications", use_container_width=True):
+        if st.button("📝 Applications", width="stretch"):
             st.switch_page("pages/applications.py")
     
     # Logout button

@@ -2,6 +2,7 @@
 import streamlit as st
 import os
 import re
+import sys
 from datetime import datetime
 import google.generativeai as genai
 from simple_vector_store import SimpleVectorStore as MilvusVectorStore
@@ -11,6 +12,10 @@ from pages.upload_docs import get_vector_store, get_text_chunks
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from ai.web_search import search_web, format_search_results, is_search_needed, extract_search_query
 import boto3
+
+# Add parent directory to path
+sys.path.insert(0, '.')
+from components.quick_notes import render_quick_notes
 
 
 genai.configure(api_key=os.getenv("GENAI_API_KEY"))
@@ -771,15 +776,8 @@ def main():
     st.title("🎯 Job Search Agent")
     st.markdown("Your AI-powered career companion")
 
-    # Import here to avoid circular imports
-    try:
-        from storage.json_db import JobSearchDB
-        db = JobSearchDB()
-        has_job_db = True
-    except Exception as e:
-        print(f"Job search DB not available: {e}")
-        db = None
-        has_job_db = False
+    # Render quick notes in sidebar (accessible from anywhere)
+    render_quick_notes()
 
     # Sidebar for quick actions
     with st.sidebar:
@@ -790,8 +788,8 @@ def main():
         with st.form(key="manual_save_form", clear_on_submit=True):
             info_to_save = st.text_area(
                 "Information to save:",
-                placeholder="Enter any information you want to remember...\nExample: My favorite color is blue",
-                height=240,
+                placeholder="Example: Remember that my favorite color is blue",
+                height=200,
                 help="This will be added to your knowledge base immediately"
             )
 
@@ -815,27 +813,6 @@ def main():
                 else:
                     st.error(f"❌ Error: {result}")
 
-        st.divider()
-        st.caption("💡 **Tip**: Type 'Remember that...' or 'Applied to...' in chat")
-
-        st.divider()
-
-        # Quick stats
-        if has_job_db and db:
-            st.header("📊 Quick Stats")
-            try:
-                stats = db.get_stats()
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("Applications", stats['total'])
-                with col2:
-                    st.metric("Active", stats['active'])
-
-                if stats['total'] > 0:
-                    st.metric("Response Rate", f"{stats['response_rate']}%")
-            except Exception as e:
-                st.caption("No applications yet")
-
     # Initialize vector store if empty (to avoid errors on first query)
     try:
         vector_store = MilvusVectorStore()
@@ -852,19 +829,19 @@ def main():
     # Quick action buttons
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
-        if st.button("📊 Dashboard", use_container_width=True):
+        if st.button("📊 Dashboard", width="stretch"):
             st.switch_page("pages/dashboard.py")
     with col2:
-        if st.button("📅 Interviews", use_container_width=True):
+        if st.button("📅 Interviews", width="stretch"):
             st.switch_page("pages/interview_schedule.py")
     with col3:
-        if st.button("🎯 Interview Prep", use_container_width=True):
+        if st.button("🎯 Interview Prep", width="stretch"):
             st.switch_page("pages/interview_prep.py")
     with col4:
-        if st.button("📄 Resume", use_container_width=True):
+        if st.button("📄 Resume", width="stretch"):
             st.switch_page("pages/resume.py")
     with col5:
-        if st.button("📋 View All Apps", use_container_width=True):
+        if st.button("📋 View All Apps", width="stretch"):
             st.switch_page("pages/applications.py")
 
     st.divider()
@@ -910,7 +887,7 @@ def main():
 
     st.markdown("<div style='height:200px;'></div>", unsafe_allow_html=True)
     st.markdown("---")
-    st.button("Log out", on_click=logout, use_container_width=True)
+    st.button("Log out", on_click=logout, width="stretch")
 
 if __name__ == "__main__":
     main()

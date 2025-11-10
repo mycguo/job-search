@@ -349,18 +349,18 @@ def main():
     with col1:
         st.subheader("🔄 Application Pipeline")
         pipeline_chart = create_pipeline_chart(metrics)
-        st.plotly_chart(pipeline_chart, use_container_width=True)
+        st.plotly_chart(pipeline_chart, width="stretch")
 
     with col2:
         st.subheader("📊 Status Distribution")
         status_chart = create_status_distribution_chart(metrics)
-        st.plotly_chart(status_chart, use_container_width=True)
+        st.plotly_chart(status_chart, width="stretch")
 
     # Timeline Chart
     st.subheader("📅 Application Timeline")
     timeline_chart = create_timeline_chart(apps)
     if timeline_chart:
-        st.plotly_chart(timeline_chart, use_container_width=True)
+        st.plotly_chart(timeline_chart, width="stretch")
     else:
         st.info("No timeline data available yet")
 
@@ -416,15 +416,15 @@ def main():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("➕ Add New Application", use_container_width=True):
+        if st.button("➕ Add New Application", width="stretch"):
             st.switch_page("pages/applications.py")
 
     with col2:
-        if st.button("📝 View All Applications", use_container_width=True):
+        if st.button("📝 View All Applications", width="stretch"):
             st.switch_page("pages/applications.py")
 
     with col3:
-        if st.button("🏠 Back to Home", use_container_width=True):
+        if st.button("🏠 Back to Home", width="stretch"):
             st.switch_page("app.py")
     
     # Logout button

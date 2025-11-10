@@ -18,6 +18,7 @@ from storage.json_db import JobSearchDB
 from ai.job_matcher import JobMatcher, get_default_user_profile
 from storage.auth_utils import is_user_logged_in, login, logout
 from pages.resume import fetch_job_description_from_url
+from components.quick_notes import render_quick_notes
 
 
 def build_contact_link(name: str, url: str, email: str = None) -> Optional[ContactLink]:
@@ -197,7 +198,7 @@ def show_application_card(app: Application, db: JobSearchDB):
                         key=f"cover_letter_text_card_{app.id}"
                     )
                     
-                    if st.button("💾 Save Cover Letter", key=f"save_cover_card_{app.id}", use_container_width=True):
+                    if st.button("💾 Save Cover Letter", key=f"save_cover_card_{app.id}", width="stretch"):
                         db.update_application(app.id, {'cover_letter': edited_cover_letter_card})
                         st.session_state[cover_letter_key_card] = edited_cover_letter_card
                         st.success("✅ Cover letter saved!")
@@ -332,7 +333,7 @@ def show_application_detail(db: JobSearchDB, app_id: str):
             elif has_job_url and not has_description:
                 st.caption(f"ℹ️ Will fetch job description from: {app.job_url[:60]}...")
 
-            run_analysis = st.button(analyze_button_label, type="primary", use_container_width=True)
+            run_analysis = st.button(analyze_button_label, type="primary", width="stretch")
 
             if run_analysis:
                 job_description_to_analyze = None
@@ -474,7 +475,7 @@ def show_application_detail(db: JobSearchDB, app_id: str):
             current_cover_letter = app.cover_letter or st.session_state.get(cover_letter_key, "")
             
             # Generate button
-            if st.button("✍️ Generate Cover Letter", use_container_width=True):
+            if st.button("✍️ Generate Cover Letter", width="stretch"):
                 with st.spinner("Generating cover letter..."):
                     try:
                         matcher = JobMatcher()
@@ -508,7 +509,7 @@ def show_application_detail(db: JobSearchDB, app_id: str):
                 # Save button row
                 col1, col2 = st.columns([3, 1])
                 with col2:
-                    if st.button("💾 Save Cover Letter", type="primary", use_container_width=True, key=f"save_cover_{app.id}"):
+                    if st.button("💾 Save Cover Letter", type="primary", width="stretch", key=f"save_cover_{app.id}"):
                         # Save to database
                         db.update_application(app_id, {'cover_letter': edited_cover_letter})
                         # Update session state
@@ -680,7 +681,7 @@ def show_application_detail(db: JobSearchDB, app_id: str):
             col1, col2 = st.columns(2)
 
             with col1:
-                save_clicked = st.button("💾 Save Changes", type="primary", use_container_width=True, key=f"save_btn_{app.id}")
+                save_clicked = st.button("💾 Save Changes", type="primary", width="stretch", key=f"save_btn_{app.id}")
                 if save_clicked:
                     # Collapse the edit form and set flag to prevent immediate re-expansion
                     st.session_state[edit_expanded_key] = False
@@ -707,7 +708,7 @@ def show_application_detail(db: JobSearchDB, app_id: str):
                     st.rerun()
 
             with col2:
-                cancel_clicked = st.button("✕ Cancel", use_container_width=True, key=f"cancel_btn_{app.id}")
+                cancel_clicked = st.button("✕ Cancel", width="stretch", key=f"cancel_btn_{app.id}")
                 if cancel_clicked:
                     # Collapse the edit form and set flag to prevent immediate re-expansion
                     st.session_state[edit_expanded_key] = False
@@ -783,6 +784,9 @@ def main():
             "Sort By",
             ["Applied Date (Newest)", "Applied Date (Oldest)", "Company (A-Z)", "Company (Z-A)"]
         )
+
+    # Render quick notes in sidebar (accessible from anywhere)
+    render_quick_notes()
 
     # Add new application
     st.header("➕ Add New Application")

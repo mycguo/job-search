@@ -36,11 +36,15 @@ class JobSearchDB:
         self.applications_file = os.path.join(data_dir, "applications.json")
         self.contacts_file = os.path.join(data_dir, "contacts.json")
         self.profile_file = os.path.join(data_dir, "profile.json")
+        self.quick_notes_file = os.path.join(data_dir, "quick_notes.json")
+        self.companies_file = os.path.join(data_dir, "companies.json")
 
         # Initialize files if they don't exist
         self._init_file(self.applications_file, [])
         self._init_file(self.contacts_file, [])
         self._init_file(self.profile_file, {})
+        self._init_file(self.quick_notes_file, [])
+        self._init_file(self.companies_file, [])
 
     def _init_file(self, filepath: str, default_content):
         """Create file with default content if it doesn't exist"""
@@ -507,5 +511,238 @@ class JobSearchDB:
                 (app.notes and query_lower in app.notes.lower()) or
                 (app.location and query_lower in app.location.lower())):
                 results.append(app)
+
+        return results
+
+    # ==================== QUICK NOTES CRUD ====================
+
+    def add_quick_note(self, label: str, content: str, note_type: str = "text") -> str:
+        """
+        Add a new quick note.
+
+        Args:
+            label: Label/title for the note
+            content: Content of the note (URL, text, etc.)
+            note_type: Type of note (text, url, code, etc.)
+
+        Returns:
+            Note ID
+        """
+        notes = self._read_json(self.quick_notes_file)
+
+        # Generate ID
+        note_id = f"note_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+
+        note = {
+            'id': note_id,
+            'label': label,
+            'content': content,
+            'type': note_type,
+            'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'updated_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        notes.append(note)
+        self._write_json(self.quick_notes_file, notes)
+
+        return note_id
+
+    def get_quick_notes(self) -> List[Dict]:
+        """
+        Get all quick notes.
+
+        Returns:
+            List of quick notes
+        """
+        return self._read_json(self.quick_notes_file)
+
+    def get_quick_note(self, note_id: str) -> Optional[Dict]:
+        """
+        Get a specific quick note.
+
+        Args:
+            note_id: Note ID
+
+        Returns:
+            Note dict or None
+        """
+        notes = self._read_json(self.quick_notes_file)
+        for note in notes:
+            if note['id'] == note_id:
+                return note
+        return None
+
+    def update_quick_note(self, note_id: str, label: str = None, content: str = None, note_type: str = None) -> bool:
+        """
+        Update a quick note.
+
+        Args:
+            note_id: Note ID
+            label: New label (optional)
+            content: New content (optional)
+            note_type: New type (optional)
+
+        Returns:
+            True if updated, False if not found
+        """
+        notes = self._read_json(self.quick_notes_file)
+
+        for note in notes:
+            if note['id'] == note_id:
+                if label is not None:
+                    note['label'] = label
+                if content is not None:
+                    note['content'] = content
+                if note_type is not None:
+                    note['type'] = note_type
+                note['updated_at'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                self._write_json(self.quick_notes_file, notes)
+                return True
+
+        return False
+
+    def delete_quick_note(self, note_id: str) -> bool:
+        """
+        Delete a quick note.
+
+        Args:
+            note_id: Note ID
+
+        Returns:
+            True if deleted, False if not found
+        """
+        notes = self._read_json(self.quick_notes_file)
+        original_length = len(notes)
+
+        notes = [n for n in notes if n['id'] != note_id]
+
+        if len(notes) < original_length:
+            self._write_json(self.quick_notes_file, notes)
+            return True
+
+        return False
+
+    # ==================== COMPANIES ====================
+
+    def add_company(self, company_data: Dict) -> str:
+        """
+        Add a new company.
+
+        Args:
+            company_data: Company dictionary (from Company.to_dict())
+
+        Returns:
+            Company ID
+        """
+        companies = self._read_json(self.companies_file)
+        companies.append(company_data)
+        self._write_json(self.companies_file, companies)
+        return company_data['id']
+
+    def get_companies(self) -> List[Dict]:
+        """
+        Get all companies.
+
+        Returns:
+            List of company dictionaries
+        """
+        return self._read_json(self.companies_file)
+
+    def get_company(self, company_id: str) -> Optional[Dict]:
+        """
+        Get a specific company by ID.
+
+        Args:
+            company_id: Company ID
+
+        Returns:
+            Company dict or None
+        """
+        companies = self._read_json(self.companies_file)
+        for company in companies:
+            if company['id'] == company_id:
+                return company
+        return None
+
+    def get_company_by_name(self, name: str) -> Optional[Dict]:
+        """
+        Get a company by name (case-insensitive).
+
+        Args:
+            name: Company name
+
+        Returns:
+            Company dict or None
+        """
+        companies = self._read_json(self.companies_file)
+        name_lower = name.lower()
+        for company in companies:
+            if company['name'].lower() == name_lower:
+                return company
+        return None
+
+    def update_company(self, company_data: Dict) -> bool:
+        """
+        Update a company.
+
+        Args:
+            company_data: Updated company dictionary
+
+        Returns:
+            True if updated, False if not found
+        """
+        companies = self._read_json(self.companies_file)
+
+        for i, company in enumerate(companies):
+            if company['id'] == company_data['id']:
+                company_data['updated_at'] = datetime.now().isoformat()
+                companies[i] = company_data
+                self._write_json(self.companies_file, companies)
+                return True
+
+        return False
+
+    def delete_company(self, company_id: str) -> bool:
+        """
+        Delete a company.
+
+        Args:
+            company_id: Company ID
+
+        Returns:
+            True if deleted, False if not found
+        """
+        companies = self._read_json(self.companies_file)
+        original_length = len(companies)
+
+        companies = [c for c in companies if c['id'] != company_id]
+
+        if len(companies) < original_length:
+            self._write_json(self.companies_file, companies)
+            return True
+
+        return False
+
+    def search_companies(self, query: str) -> List[Dict]:
+        """
+        Search companies by name, industry, or notes.
+
+        Args:
+            query: Search query
+
+        Returns:
+            List of matching companies
+        """
+        companies = self._read_json(self.companies_file)
+        query_lower = query.lower()
+
+        results = []
+        for company in companies:
+            if (query_lower in company['name'].lower() or
+                query_lower in company.get('industry', '').lower() or
+                query_lower in company.get('notes', '').lower() or
+                query_lower in company.get('description', '').lower()):
+                results.append(company)
 
         return results
