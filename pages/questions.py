@@ -137,11 +137,11 @@ def main():
             help="Filter by category"
         )
 
-        # Difficulty filter
-        filter_difficulty = st.selectbox(
-            "Difficulty",
-            ["All", "easy", "medium", "hard"],
-            help="Filter by difficulty level"
+        # Importance filter
+        filter_importance = st.selectbox(
+            "Importance",
+            ["All", "10", "9", "8", "7", "6", "5", "4", "3", "2", "1"],
+            help="Filter by importance level"
         )
 
         # Confidence filter
@@ -224,9 +224,9 @@ def main():
     if filter_category != "All":
         filtered_questions = [q for q in filtered_questions if q.category == filter_category]
 
-    # Difficulty filter
-    if filter_difficulty != "All":
-        filtered_questions = [q for q in filtered_questions if q.difficulty == filter_difficulty]
+    # Importance filter
+    if filter_importance != "All":
+        filtered_questions = [q for q in filtered_questions if q.importance == int(filter_importance)]
 
     # Confidence filter
     if filter_confidence == "Low (1-2)":

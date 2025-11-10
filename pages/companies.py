@@ -169,9 +169,26 @@ def show_add_edit_form(db: JobSearchDB, company_id: str = None):
             st.error("Company not found")
             return
         company = Company.from_dict(company_dict)
-        st.title(f"✏️ Edit {company.name}")
+
+        # Header with back button
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.title(f"✏️ Edit {company.name}")
+        with col2:
+            if st.button("← Back", width="stretch"):
+                del st.session_state['edit_company_id']
+                st.session_state['view_company_id'] = company_id
+                st.rerun()
     else:
-        st.title("➕ Add New Company")
+        # Header with back button
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.title("➕ Add New Company")
+        with col2:
+            if st.button("← Back", width="stretch"):
+                if 'add_company_mode' in st.session_state:
+                    del st.session_state['add_company_mode']
+                st.rerun()
         company = None
 
     with st.form("company_form"):
@@ -303,6 +320,10 @@ def show_add_edit_form(db: JobSearchDB, company_id: str = None):
             if is_edit:
                 del st.session_state['edit_company_id']
                 st.session_state['view_company_id'] = company_id
+            else:
+                # Clear add mode
+                if 'add_company_mode' in st.session_state:
+                    del st.session_state['add_company_mode']
             st.rerun()
 
         if submit:
@@ -361,6 +382,9 @@ def show_add_edit_form(db: JobSearchDB, company_id: str = None):
 
                     company_id = db.add_company(new_company.to_dict())
                     st.success(f"✅ Added {name}")
+                    # Clear add mode and show detail view
+                    if 'add_company_mode' in st.session_state:
+                        del st.session_state['add_company_mode']
                     st.session_state['view_company_id'] = company_id
                     st.rerun()
 
@@ -374,6 +398,11 @@ def main():
 
     # Initialize database
     db = JobSearchDB()
+
+    # Check for add mode
+    if st.session_state.get('add_company_mode'):
+        show_add_edit_form(db)
+        return
 
     # Check for edit mode
     if st.session_state.get('edit_company_id'):
@@ -404,8 +433,8 @@ def main():
     with col3:
         st.write("")  # Spacer
         if st.button("➕ Add Company", type="primary", width="stretch", key="add_company_top"):
-            show_add_edit_form(db)
-            return
+            st.session_state['add_company_mode'] = True
+            st.rerun()
 
     # Filters
     with st.sidebar:
@@ -496,8 +525,8 @@ def main():
     if len(filtered_companies) == 0:
         st.info("🔍 No companies found. Add your first company to get started!")
         if st.button("➕ Add Company", type="primary", key="add_company_empty"):
-            show_add_edit_form(db)
-            return
+            st.session_state['add_company_mode'] = True
+            st.rerun()
     else:
         for company_dict in filtered_companies:
             show_company_card(company_dict, db)
@@ -520,8 +549,8 @@ def main():
 
     with col4:
         if st.button("➕ Add Company", width="stretch", type="primary", key="add_company_bottom"):
-            show_add_edit_form(db)
-            return
+            st.session_state['add_company_mode'] = True
+            st.rerun()
 
     # Logout button
     st.divider()
