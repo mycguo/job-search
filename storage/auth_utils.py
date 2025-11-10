@@ -69,10 +69,14 @@ def is_user_logged_in() -> bool:
                 st.session_state['authenticated_in_session'] = True
                 return True
         
-        # No login attempted yet - require login
-        # Note: Even if user is logged in via cookie, we require them to click login button
-        # This satisfies the "require login on every restart" requirement
-        # When they click login, they'll be authenticated instantly (see login() function)
+        # No login attempted yet - check if user is already logged in via cookie
+        if has_auth_system and user_is_logged_in:
+            # User is already logged in from another tab/session via cookie
+            # Automatically authenticate this session
+            st.session_state['authenticated_in_session'] = True
+            return True
+
+        # User not logged in - require login
         return False
         
     except (AttributeError, KeyError) as e:

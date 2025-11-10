@@ -29,24 +29,6 @@ def login_screen():
 def main():
     st.set_page_config(page_title="Quick Notes", page_icon="📝", layout="wide")
 
-    # JavaScript to auto-open in new tab when clicked from navigation
-    st.markdown("""
-        <script>
-            // Check if this is NOT already in a new tab/window
-            if (!window.sessionStorage.getItem('quick_notes_new_tab')) {
-                // Check if this is the first load (from navigation click)
-                if (!window.opener && window.history.length <= 2) {
-                    // Mark that we're opening in a new tab
-                    window.sessionStorage.setItem('quick_notes_new_tab', 'true');
-                    // Open in new tab
-                    window.open(window.location.href, '_blank');
-                    // Go back in the main window
-                    window.history.back();
-                }
-            }
-        </script>
-    """, unsafe_allow_html=True)
-
     if not is_user_logged_in():
         login_screen()
         return
@@ -285,27 +267,67 @@ def main():
 
                     with col3:
                         if not is_editing_note:
-                            # Copy button - use native Streamlit button with JavaScript copy
-                            if st.button("📋", key=f"copy_btn_{note_id}", width="stretch", help="Copy"):
-                                # Inject JavaScript to copy content
-                                import base64
-                                encoded_content = base64.b64encode(content.encode('utf-8')).decode('utf-8')
-                                copy_script = f"""
+                            # Copy button using HTML component
+                            import base64
+                            encoded_content = base64.b64encode(content.encode('utf-8')).decode('utf-8')
+                            button_id = f"copy_{note_id}"
+
+                            copy_html = f"""
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <style>
+                                    body {{
+                                        margin: 0;
+                                        padding: 0;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        height: 100%;
+                                    }}
+                                    button {{
+                                        width: 100%;
+                                        height: 38px;
+                                        padding: 0.25rem 0.75rem;
+                                        background-color: rgb(255, 255, 255);
+                                        color: rgb(49, 51, 63);
+                                        border: 1px solid rgba(49, 51, 63, 0.2);
+                                        border-radius: 0.5rem;
+                                        cursor: pointer;
+                                        font-size: 1rem;
+                                        transition: all 0.3s;
+                                    }}
+                                    button:hover {{
+                                        border-color: rgb(255, 75, 75);
+                                        color: rgb(255, 75, 75);
+                                    }}
+                                </style>
+                            </head>
+                            <body>
+                                <button id="{button_id}" title="Copy">📋</button>
                                 <script>
-                                (function() {{
-                                    const text = atob('{encoded_content}');
-                                    const textarea = document.createElement('textarea');
-                                    textarea.value = text;
-                                    textarea.style.position = 'fixed';
-                                    textarea.style.opacity = '0';
-                                    document.body.appendChild(textarea);
-                                    textarea.select();
-                                    document.execCommand('copy');
-                                    document.body.removeChild(textarea);
-                                }})();
+                                    document.getElementById('{button_id}').addEventListener('click', function() {{
+                                        const text = atob('{encoded_content}');
+                                        const textarea = document.createElement('textarea');
+                                        textarea.value = text;
+                                        textarea.style.position = 'fixed';
+                                        textarea.style.opacity = '0';
+                                        document.body.appendChild(textarea);
+                                        textarea.select();
+                                        try {{
+                                            document.execCommand('copy');
+                                            this.textContent = '✓';
+                                            setTimeout(() => {{ this.textContent = '📋'; }}, 1000);
+                                        }} catch (err) {{
+                                            console.error('Copy failed:', err);
+                                        }}
+                                        document.body.removeChild(textarea);
+                                    }});
                                 </script>
-                                """
-                                st.markdown(copy_script, unsafe_allow_html=True)
+                            </body>
+                            </html>
+                            """
+                            components.html(copy_html, height=38)
                         else:
                             st.write("")
 
