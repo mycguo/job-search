@@ -37,12 +37,14 @@ class JobSearchDB:
         self.contacts_file = os.path.join(data_dir, "contacts.json")
         self.profile_file = os.path.join(data_dir, "profile.json")
         self.quick_notes_file = os.path.join(data_dir, "quick_notes.json")
+        self.companies_file = os.path.join(data_dir, "companies.json")
 
         # Initialize files if they don't exist
         self._init_file(self.applications_file, [])
         self._init_file(self.contacts_file, [])
         self._init_file(self.profile_file, {})
         self._init_file(self.quick_notes_file, [])
+        self._init_file(self.companies_file, [])
 
     def _init_file(self, filepath: str, default_content):
         """Create file with default content if it doesn't exist"""
@@ -620,3 +622,127 @@ class JobSearchDB:
             return True
 
         return False
+
+    # ==================== COMPANIES ====================
+
+    def add_company(self, company_data: Dict) -> str:
+        """
+        Add a new company.
+
+        Args:
+            company_data: Company dictionary (from Company.to_dict())
+
+        Returns:
+            Company ID
+        """
+        companies = self._read_json(self.companies_file)
+        companies.append(company_data)
+        self._write_json(self.companies_file, companies)
+        return company_data['id']
+
+    def get_companies(self) -> List[Dict]:
+        """
+        Get all companies.
+
+        Returns:
+            List of company dictionaries
+        """
+        return self._read_json(self.companies_file)
+
+    def get_company(self, company_id: str) -> Optional[Dict]:
+        """
+        Get a specific company by ID.
+
+        Args:
+            company_id: Company ID
+
+        Returns:
+            Company dict or None
+        """
+        companies = self._read_json(self.companies_file)
+        for company in companies:
+            if company['id'] == company_id:
+                return company
+        return None
+
+    def get_company_by_name(self, name: str) -> Optional[Dict]:
+        """
+        Get a company by name (case-insensitive).
+
+        Args:
+            name: Company name
+
+        Returns:
+            Company dict or None
+        """
+        companies = self._read_json(self.companies_file)
+        name_lower = name.lower()
+        for company in companies:
+            if company['name'].lower() == name_lower:
+                return company
+        return None
+
+    def update_company(self, company_data: Dict) -> bool:
+        """
+        Update a company.
+
+        Args:
+            company_data: Updated company dictionary
+
+        Returns:
+            True if updated, False if not found
+        """
+        companies = self._read_json(self.companies_file)
+
+        for i, company in enumerate(companies):
+            if company['id'] == company_data['id']:
+                company_data['updated_at'] = datetime.now().isoformat()
+                companies[i] = company_data
+                self._write_json(self.companies_file, companies)
+                return True
+
+        return False
+
+    def delete_company(self, company_id: str) -> bool:
+        """
+        Delete a company.
+
+        Args:
+            company_id: Company ID
+
+        Returns:
+            True if deleted, False if not found
+        """
+        companies = self._read_json(self.companies_file)
+        original_length = len(companies)
+
+        companies = [c for c in companies if c['id'] != company_id]
+
+        if len(companies) < original_length:
+            self._write_json(self.companies_file, companies)
+            return True
+
+        return False
+
+    def search_companies(self, query: str) -> List[Dict]:
+        """
+        Search companies by name, industry, or notes.
+
+        Args:
+            query: Search query
+
+        Returns:
+            List of matching companies
+        """
+        companies = self._read_json(self.companies_file)
+        query_lower = query.lower()
+
+        results = []
+        for company in companies:
+            if (query_lower in company['name'].lower() or
+                query_lower in company.get('industry', '').lower() or
+                query_lower in company.get('notes', '').lower() or
+                query_lower in company.get('description', '').lower()):
+                results.append(company)
+
+        return results
