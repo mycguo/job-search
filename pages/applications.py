@@ -968,15 +968,30 @@ def main():
     elif "Z-A" in sort_by:
         applications = sorted(applications, key=lambda x: x.company.lower(), reverse=True)
 
-    # Display count
-    st.write(f"**Showing {len(applications)} application(s)**")
+    # Split applications into active and archived
+    active_applications = [app for app in applications if app.status not in ["rejected", "withdrawn"]]
+    archived_applications = [app for app in applications if app.status in ["rejected", "withdrawn"]]
 
-    if len(applications) == 0:
-        st.info("🎯 No applications yet. Add your first one above!")
+    # Display active applications
+    st.write(f"**Showing {len(active_applications)} active application(s)**")
+
+    if len(active_applications) == 0:
+        if len(archived_applications) > 0:
+            st.info("🎯 No active applications. Check the Archived Jobs section below.")
+        else:
+            st.info("🎯 No applications yet. Add your first one above!")
     else:
-        # Display applications
-        for app in applications:
+        # Display active applications
+        for app in active_applications:
             show_application_card(app, db)
+
+    # Display archived applications in a separate section
+    if len(archived_applications) > 0:
+        st.divider()
+        with st.expander(f"📦 Archived Jobs ({len(archived_applications)} applications)", expanded=False):
+            st.caption("Applications with 'Rejected' or 'Withdrawn' status")
+            for app in archived_applications:
+                show_application_card(app, db)
 
     # Bulk actions
     if len(applications) > 0:

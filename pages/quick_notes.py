@@ -333,10 +333,14 @@ def main():
 
                     with col4:
                         if not is_editing_note:
-                            # Edit button
-                            if st.button("✏️", key=f"edit_btn_{note_id}", width="stretch", help="Edit"):
-                                st.session_state[note_edit_key] = True
-                                st.rerun()
+                            # Edit button - only show on first line of category
+                            if idx == 0:
+                                if st.button("✏️", key=f"edit_btn_{note_id}", width="stretch", help="Edit"):
+                                    st.session_state[note_edit_key] = True
+                                    st.rerun()
+                            else:
+                                # Empty space for subsequent items
+                                st.write("")
                         else:
                             # Empty space when editing
                             st.write("")
