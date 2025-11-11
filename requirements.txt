@@ -37,3 +37,4 @@ openpyxl
 cryptography
 duckduckgo-search
 reportlab
+plotly
